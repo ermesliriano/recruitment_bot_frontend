@@ -15,7 +15,10 @@ export default function App() {
   const createVacancy = async () => {
     await fetch(`${API}/vacancies`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+	    "Content-Type": "application/json",
+	    Authorization: `Bearer ${ADMIN_TOKEN}`,	  
+	  },
       body: JSON.stringify({
         title,
         description: "Nueva vacante desde UI"
