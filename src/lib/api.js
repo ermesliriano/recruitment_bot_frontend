@@ -9,6 +9,15 @@ const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
 
 const ENV_ADMIN_TOKEN = String(import.meta.env.VITE_ADMIN_TOKEN || "").trim();
 
+console.log("[ENV DEBUG]", {
+  MODE: import.meta.env.MODE,
+  PROD: import.meta.env.PROD,
+  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+  VITE_TENANT_ID: import.meta.env.VITE_TENANT_ID,
+  VITE_VACANCY_ID: import.meta.env.VITE_VACANCY_ID,
+  hasAdminToken: Boolean(import.meta.env.VITE_ADMIN_TOKEN),
+});
+
 export class ApiError extends Error {
   constructor(message, { status = 0, body = null } = {}) {
     super(message);
