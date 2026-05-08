@@ -337,7 +337,7 @@ export default function VacancyFormPage() {
 
           <div className="form-grid grid-3">
             <label className="label">
-              Threshold review
+              Puntuación mínima para revisión
               <input
                 className="input"
                 type="number"
@@ -349,7 +349,7 @@ export default function VacancyFormPage() {
             </label>
 
             <label className="label">
-              Threshold interview
+              Puntuación mínima para entrevista
               <input
                 className="input"
                 type="number"
@@ -361,7 +361,7 @@ export default function VacancyFormPage() {
             </label>
 
             <label className="label">
-              Threshold shortlist
+              Puntuación mínima para finalistas
               <input
                 className="input"
                 type="number"
