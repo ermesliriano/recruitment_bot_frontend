@@ -100,8 +100,7 @@ export default function ApplicationDetailPage() {
           <div>
             <h1 className="h1">Detalle de aplicación</h1>
             <p className="muted">
-              Endpoint consumido: `/admin/v1/tenants/{`{tenant_id}`}/applications/
-              {`{application_id}`}`
+              Información detallada de la candidatura seleccionada: puntuaciones, estado y datos del proceso de selección.
             </p>
           </div>
 
@@ -118,8 +117,7 @@ export default function ApplicationDetailPage() {
 
       {!tenantId ? (
         <div className="warning-box">
-          Esta página necesita un `tenant_id` activo. Defínelo antes en el
-          dashboard o en el ranking.
+          Esta página requiere un tenant activo. Seleccionálo desde el dashboard o el ranking antes de acceder al detalle.
         </div>
       ) : null}
 
@@ -147,7 +145,7 @@ export default function ApplicationDetailPage() {
           </section>
 
           <section className="card">
-            <h2 className="h2">Respuesta cruda del backend</h2>
+            <h2 className="h2">Datos completos de la candidatura</h2>
             <pre className="code-block">
               {JSON.stringify(data, null, 2)}
             </pre>

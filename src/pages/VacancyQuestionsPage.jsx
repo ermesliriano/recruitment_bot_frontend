@@ -221,31 +221,25 @@ export default function VacancyQuestionsPage() {
 
       {!routeVacancyId ? (
         <div className="error-box">
-          Falta `vacancy_id` en la URL. Accede a esta pantalla desde el
-          dashboard o usa una ruta como `/vacancies/&lt;id&gt;/questions`.
+          No se ha podido identificar la vacante. Accede a esta pantalla desde el dashboard o el listado de vacantes.
         </div>
       ) : null}
 
       <section className="card">
-        <div className="warning-box">
-          El esquema exacto de <code>{"POST /vacancies/{id}/questions"}</code> no
-          se ha compartido en el material recibido. Por eso esta vista genera un
-          payload base y, además, te deja editar manualmente el JSON antes de
-          enviarlo.
-        </div>
+        {/* Formulario de creación de pregunta para la vacante activa */}
 
         {renderError("submit")}
 
         <form className="form" onSubmit={handleSubmit} noValidate>
           <div className="form-grid grid-2">
             <label className="label">
-              Código opcional
+              Código de la pregunta
               <input
                 className="input"
                 name="code"
                 value={form.code}
                 onChange={handleChange}
-                placeholder="Opcional. Si tu backend lo necesita, escríbelo aquí."
+                placeholder="Opcional. Identificador interno de la pregunta."
               />
             </label>
 
@@ -338,9 +332,7 @@ export default function VacancyQuestionsPage() {
           {renderError("rawJson")}
 
           <div className="notice">
-            Si el backend espera claves como `kind`, `prompt`, `question_type`,
-            `order_index` u otras variantes, activa “Editar JSON manualmente” y
-            corrige el body antes del envío.
+            El JSON generado puede editarse manualmente si la configuración de la vacante requiere campos adicionales.
           </div>
 
           <div className="form-actions">
@@ -353,7 +345,7 @@ export default function VacancyQuestionsPage() {
 
       {result ? (
         <section className="card">
-          <h2 className="h2">Respuesta del backend</h2>
+          <h2 className="h2">Pregunta registrada</h2>
           <pre className="code-block">{JSON.stringify(result, null, 2)}</pre>
         </section>
       ) : null}

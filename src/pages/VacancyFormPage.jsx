@@ -132,7 +132,7 @@ export default function VacancyFormPage() {
 
       pushFlash(
         "message",
-        `Vacante creada: ${createdVacancy?.title || payload.title}. El backend respondió con estado "${createdVacancy?.status || "desconocido"}".`
+        `Vacante creada correctamente: ${createdVacancy?.title || payload.title}.`
       );
 
       if (createdVacancy?.id) {
@@ -156,8 +156,7 @@ export default function VacancyFormPage() {
           <div>
             <h1 className="h1">Nueva vacante</h1>
             <p className="muted">
-              Esta vista reemplaza el formulario de alta de voluntario por un
-              formulario de alta de vacante compatible con tu `POST /vacancies/`.
+              Completa el formulario para publicar una nueva vacante en el sistema.
             </p>
           </div>
 
@@ -169,20 +168,13 @@ export default function VacancyFormPage() {
 
       <VacancySelector
         title="Tenant de la nueva vacante"
-        description="Para crear una vacante solo necesitas fijar el tenant_id."
+        description="La vacante se asociará al tenant seleccionado."
         showVacancyField={false}
         autoLoad={false}
         showLoadButton={false}
       />
 
       <section className="card">
-        <div className="warning-box">
-          El payload enviado modela únicamente los campos que ya has probado con
-          tu backend: metadatos básicos, listas, umbrales, score CV y{" "}
-          <code>{"faq_context: { items: [] }"}</code>. Si más adelante documentas
-          más campos, añádelos en `src/lib/api.js` y en este formulario.
-        </div>
-
         {renderError("tenantId")}
         {renderError("thresholds")}
         {renderError("submit")}
@@ -208,7 +200,7 @@ export default function VacancyFormPage() {
                 name="code"
                 value={form.code}
                 onChange={handleChange}
-                placeholder="Opcional. Si lo dejas vacío se generará WEB-timestamp"
+                placeholder="Opcional. Se generará automáticamente si se deja en blanco."
               />
             </label>
           </div>
@@ -339,8 +331,7 @@ export default function VacancyFormPage() {
             </label>
 
             <div className="notice">
-              Escribe las listas con un elemento por línea. El frontend las
-              convertirá a arrays antes de hacer el `POST`.
+              Escribe cada elemento de las listas en una línea independiente.
             </div>
           </div>
 

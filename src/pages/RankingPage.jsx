@@ -135,20 +135,18 @@ export default function RankingPage() {
       <section className="card">
         <h1 className="h1">Ranking de candidaturas</h1>
         <p className="muted">
-          Esta página sustituye la vista tipo listado por la información más
-          cercana a tu `application_ranking_view`: ranking ordenado, scores,
-          estado y acceso al detalle por `application_id`.
+          Consulta el ranking de candidaturas ordenadas por puntuación. Accede al detalle individual de cada aplicación introduciendosu identificador.
         </p>
       </section>
 
       <VacancySelector
         title="Contexto del ranking"
-        description="El ranking consume el tenant_id y vacancy_id actuales."
+        description="Selecciona el tenant y la vacante para cargar el ranking de candidatos."
       />
 
       {!tenantId || !vacancyId ? (
         <div className="warning-box">
-          Antes de cargar el ranking debes definir `tenant_id` y `vacancy_id`.
+          Selecciona un tenant y una vacante para visualizar el ranking de candidaturas.
         </div>
       ) : null}
 
@@ -157,9 +155,9 @@ export default function RankingPage() {
       <section className="card">
         <div className="row-space">
           <div>
-            <h2 className="h2">application_ranking_view en React</h2>
+            <h2 className="h2">Ranking de candidaturas</h2>
             <p className="muted">
-              Total actual: <strong>{total}</strong>
+              Total de candidaturas evaluadas: <strong>{total}</strong>
             </p>
           </div>
 
@@ -168,20 +166,16 @@ export default function RankingPage() {
           </button>
         </div>
 
-        <div className="warning-box">
-          El ranking que has compartido no incluye `application_id` por fila.
-          Por eso esta vista añade un acceso manual al detalle: pega el ID de
-          aplicación y navega a su endpoint específico.
-        </div>
+        {/* Acceso directo al detalle de una candidatura por identificador */}
 
         <form className="inline-form" onSubmit={handleOpenApplication}>
           <label className="label">
-            Abrir aplicación por ID
+            Consultar candidatura por ID
             <input
               className="input"
               value={applicationId}
               onChange={(event) => setApplicationId(event.target.value)}
-              placeholder="Pega aquí application_id"
+              placeholder="Introduce el ID de la candidatura"
             />
           </label>
 
