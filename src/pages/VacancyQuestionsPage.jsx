@@ -34,6 +34,11 @@ function validateQuestionForm({ routeVacancyId, form, parsedManualPayload }) {
       }
     }
 
+    const maxPts = Number(form.max_points);
+    if (!Number.isInteger(maxPts) || maxPts < 0 || maxPts > 100) {
+      errors.max_points = "La puntuación máxima debe ser un entero entre 0 y 100.";
+    }
+
     if (form.type === "select" && splitLinesToList(form.options).length === 0) {
       errors.options =
         "Para el tipo select debes indicar una opción por línea.";
@@ -56,6 +61,7 @@ export default function VacancyQuestionsPage() {
     order: "1",
     required: true,
     options: "",
+    max_points: "0",
     manualJson: false,
     rawJson: "",
   });
@@ -81,8 +87,9 @@ export default function VacancyQuestionsPage() {
         required: form.required,
         order: form.order,
         options: form.options,
+        max_points: form.max_points,
       }),
-    [form.code, form.text, form.type, form.required, form.order, form.options]
+    [form.code, form.text, form.type, form.required, form.order, form.options, form.max_points]
   );
 
   const computedPayloadText = useMemo(
@@ -180,6 +187,7 @@ export default function VacancyQuestionsPage() {
         text: "",
         order: String(Number(current.order || 1) + 1),
         options: "",
+        max_points: "0",
         manualJson: false,
         rawJson: "",
       }));
@@ -286,14 +294,18 @@ export default function VacancyQuestionsPage() {
               {renderError("order")}
             </label>
 
-            <label className="checkbox-row">
+            <label className="label">
+              Puntuación máxima
               <input
-                type="checkbox"
-                name="required"
-                checked={form.required}
+                className="input"
+                type="number"
+                min="0"
+                max="100"
+                name="max_points"
+                value={form.max_points}
                 onChange={handleChange}
               />
-              <span>Pregunta obligatoria</span>
+              {renderError("max_points")}
             </label>
           </div>
 

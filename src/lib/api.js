@@ -220,6 +220,7 @@ export function buildQuestionPayload({
   required,
   order,
   options,
+  max_points,
 }) {
   const payload = {
     text: String(text || "").trim(),
@@ -229,6 +230,10 @@ export function buildQuestionPayload({
       Number.isFinite(Number(order)) && Number(order) > 0
         ? Number(order)
         : 1,
+    max_points:
+      Number.isFinite(Number(max_points)) && Number(max_points) >= 0
+        ? Number(max_points)
+        : 0,
   };
 
   const normalizedCode = String(code || "").trim();

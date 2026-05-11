@@ -19,10 +19,10 @@ function validateVacancyForm({ tenantId, form }) {
     errors.description = "La descripción es obligatoria.";
   }
 
-  const cvScoreFactor = Number(form.cv_score_factor);
-  if (!Number.isFinite(cvScoreFactor) || cvScoreFactor <= 0) {
-    errors.cv_score_factor =
-      "El factor de score CV debe ser un número mayor que 0.";
+  const cvMaxScore = Number(form.cv_max_score);
+  if (!Number.isInteger(cvMaxScore) || cvMaxScore < 1 || cvMaxScore > 99) {
+    errors.cv_max_score =
+      "La puntuación máxima del CV debe ser un entero entre 1 y 99.";
   }
 
   const review = Number(form.review);
@@ -58,7 +58,7 @@ export default function VacancyFormPage() {
     schedule_text: "",
     location_text: "",
     benefits: "",
-    cv_score_factor: "6",
+    cv_max_score: "40",
     review: "35",
     interview: "60",
     shortlist: "75",
@@ -110,7 +110,7 @@ export default function VacancyFormPage() {
       faq_context: {
         items: [],
       },
-      cv_score_factor: Number(form.cv_score_factor),
+      cv_max_score: Number(form.cv_max_score),
       classification_thresholds: {
         review: Number(form.review),
         interview: Number(form.interview),
@@ -317,21 +317,23 @@ export default function VacancyFormPage() {
 
           <div className="form-grid grid-2">
             <label className="label">
-              Factor score CV
+              Puntuación máxima del CV
               <input
                 className="input"
                 type="number"
-                step="0.1"
-                min="0"
-                name="cv_score_factor"
-                value={form.cv_score_factor}
+                min="1"
+                max="99"
+                name="cv_max_score"
+                value={form.cv_max_score}
                 onChange={handleChange}
               />
-              {renderError("cv_score_factor")}
+              {renderError("cv_max_score")}
             </label>
 
             <div className="notice">
-              Escribe cada elemento de las listas en una línea independiente.
+              Puntos disponibles para preguntas:{" "}
+              <strong>{Math.max(0, 100 - (Number(form.cv_max_score) || 0))}</strong> de 100.
+              La suma de puntuaciones máximas de todas las preguntas debe igualar ese valor.
             </div>
           </div>
 
