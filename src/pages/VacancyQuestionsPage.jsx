@@ -6,6 +6,7 @@ import {
   createVacancyQuestion,
   listVacancyQuestions,
   splitLinesToList,
+  updateVacancyQuestion,
 } from "../lib/api";
 
 function validateQuestionForm({ routeVacancyId, form }) {
@@ -65,6 +66,9 @@ export default function VacancyQuestionsPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [lastCreated, setLastCreated] = useState(null);
+
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [updatingQuestion, setUpdatingQuestion] = useState(false);
 
   useEffect(() => {
     if (routeVacancyId) setSelection({ vacancyId: routeVacancyId });
@@ -135,6 +139,79 @@ export default function VacancyQuestionsPage() {
     }
   }
 
+  function handleStartEdit(question) {
+    setEditingQuestion({
+      vq_id: question.vq_id,
+      prompt_override: question.prompt_override || question.prompt_text || "",
+      question_order: String(question.question_order || 1),
+      required: Boolean(question.required),
+      max_points: String(question.max_points ?? 0),
+    });
+    setErrors({});
+  }
+
+  function handleCancelEdit() {
+    setEditingQuestion(null);
+    setErrors({});
+  }
+
+  function handleEditChange(event) {
+    const { name, value, type, checked } = event.target;
+    setEditingQuestion((cur) => ({
+      ...cur,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  }
+
+  async function handleUpdateQuestion(event) {
+    event.preventDefault();
+
+    if (!editingQuestion?.vq_id) {
+      setErrors({ submit: "No se ha podido identificar la pregunta a editar." });
+      return;
+    }
+
+    const questionOrder = Number(editingQuestion.question_order);
+    const maxPoints = Number(editingQuestion.max_points);
+
+    const nextErrors = {};
+
+    if (!Number.isInteger(questionOrder) || questionOrder < 1) {
+      nextErrors.question_order = "El orden debe ser un entero mayor o igual que 1.";
+    }
+
+    if (!Number.isInteger(maxPoints) || maxPoints < 0 || maxPoints > 100) {
+      nextErrors.max_points = "La puntuación máxima debe ser un entero entre 0 y 100.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    try {
+      setUpdatingQuestion(true);
+
+      await updateVacancyQuestion(routeVacancyId, editingQuestion.vq_id, {
+        prompt_override: editingQuestion.prompt_override.trim() || null,
+        question_order: questionOrder,
+        required: Boolean(editingQuestion.required),
+        max_points: maxPoints,
+      });
+
+      pushFlash("message", "Pregunta actualizada correctamente.");
+      setEditingQuestion(null);
+      setErrors({});
+      await loadQuestions();
+    } catch (error) {
+      setErrors({
+        submit: error.message || "No se pudo actualizar la pregunta.",
+      });
+    } finally {
+      setUpdatingQuestion(false);
+    }
+  }
+  
   return (
     <>
       <section className="card">
@@ -179,19 +256,29 @@ export default function VacancyQuestionsPage() {
         ) : (
           <div className="question-list">
             {existingQuestions.map((q) => (
-              <div key={q.vq_id} className="question-row">
-                <span className="question-row-info">
-                  <span className="question-row-title">
-                    {q.question_order}. {q.prompt_text}
-                  </span>
-                  <span className="question-row-meta">
-                    {q.answer_type} · campo: {q.field_key}
-                    {!q.required ? " · opcional" : ""}
-                  </span>
-                </span>
-                <span className="question-row-points">{q.max_points} pts</span>
-              </div>
-            ))}
+{existingQuestions.map((q) => (
+  <div key={q.vq_id} className="question-row">
+    <span className="question-row-info">
+      <span className="question-row-title">
+        {q.question_order}. {q.prompt_override || q.prompt_text}
+      </span>
+      <span className="question-row-meta">
+        {q.answer_type} · campo: {q.field_key}
+        {!q.required ? " · opcional" : ""}
+      </span>
+    </span>
+
+    <span className="question-row-points">{q.max_points} pts</span>
+
+    <button
+      className="btn small"
+      type="button"
+      onClick={() => handleStartEdit(q)}
+    >
+      Editar
+    </button>
+  </div>
+))}
           </div>
         )}
       </section>
