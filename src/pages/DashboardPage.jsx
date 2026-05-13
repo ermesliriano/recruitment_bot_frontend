@@ -114,9 +114,9 @@ export default function DashboardPage() {
         return;
       }
 
-      await setVacancyStatus(row.id, "ACTIVE");
+      await setVacancyStatus(row.id, "active");
       setVacancies((cur) =>
-        cur.map((v) => v.id === row.id ? { ...v, status: "ACTIVE" } : v)
+        cur.map((v) => v.id === row.id ? { ...v, status: "active" } : v)
       );
       pushFlash("message", `Vacante "${row.title}" activada correctamente.`);
     } catch (err) {
