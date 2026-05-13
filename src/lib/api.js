@@ -229,8 +229,7 @@ export function buildQuestionPayload({
   const normalizedAnswerType = normalizeAnswerType(type);
 
   return {
-    tenant_id: String(tenantId || "").trim(),
-    code: normalizedCode || `q_${Date.now()}`,
+    question_code: normalizedCode || `q_${Date.now()}`,
     prompt_text: normalizedText,
     answer_type: normalizedAnswerType,
 
@@ -256,22 +255,22 @@ function normalizeAnswerType(type) {
   const value = String(type || "text").trim().toLowerCase();
 
   if (value === "textarea") {
-    return "text";
+    return "TEXT";
   }
 
   if (value === "select") {
-    return "text";
+    return "TEXT";
   }
 
   if (value === "boolean") {
-    return "boolean";
+    return "BOOLEAN";
   }
 
   if (value === "number") {
-    return "number";
+    return "NUMBER";
   }
 
-  return "text";
+  return "TEXT";
 }
 
 function buildValidation(type, options) {
@@ -304,6 +303,7 @@ function buildValidation(type, options) {
 
 export async function createVacancyQuestion(
   vacancyId,
+  tenantId,
   payload,
   options = {}
 ) {
@@ -312,6 +312,7 @@ export async function createVacancyQuestion(
     {
       method: "POST",
       body: payload,
+      query: { tenant_id: tenantId },
       token: options.token,
     }
   );

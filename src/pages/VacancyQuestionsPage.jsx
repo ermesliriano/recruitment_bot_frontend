@@ -52,7 +52,7 @@ export default function VacancyQuestionsPage() {
   const { vacancyId } = useParams();
   const routeVacancyId = String(vacancyId || "").trim();
 
-  const { pushFlash, setSelection } = useAppContext();
+  const { tenantId, pushFlash, setSelection } = useAppContext();
 
   const [form, setForm] = useState({
     code: "",
@@ -89,7 +89,7 @@ export default function VacancyQuestionsPage() {
         options: form.options,
         max_points: form.max_points,
       }),
-    [tenantId, form.code, form.text, form.type, form.required, form.order, form.options, form.max_points]
+    [form.code, form.text, form.type, form.required, form.order, form.options, form.max_points]
   );
 
   const computedPayloadText = useMemo(
@@ -174,6 +174,7 @@ export default function VacancyQuestionsPage() {
 
       const createdQuestion = await createVacancyQuestion(
         routeVacancyId,
+        tenantId,
         payload
       );
 
