@@ -89,9 +89,9 @@ export default function DashboardPage() {
     if (row.status?.toLowerCase() === "active") {
       try {
         setActivating(row.id);
-        await setVacancyStatus(row.id, "ARCHIVED");
+        await setVacancyStatus(row.id, "archived");
         setVacancies((cur) =>
-          cur.map((v) => v.id === row.id ? { ...v, status: "ARCHIVED" } : v)
+          cur.map((v) => v.id === row.id ? { ...v, status: "archived" } : v)
         );
         pushFlash("message", `Vacante "${row.title}" archivada.`);
       } catch (err) {
