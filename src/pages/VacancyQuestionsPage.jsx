@@ -1,51 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import {
   buildQuestionPayload,
   createVacancyQuestion,
+  listVacancyQuestions,
   splitLinesToList,
 } from "../lib/api";
 
-function validateQuestionForm({ routeVacancyId, form, parsedManualPayload }) {
+function validateQuestionForm({ routeVacancyId, form }) {
   const errors = {};
 
   if (!routeVacancyId) {
-    errors.submit = "La URL no contiene vacancy_id.";
+    errors.submit = "No se ha podido identificar la vacante.";
   }
 
-  if (form.manualJson) {
-    if (!form.rawJson.trim()) {
-      errors.rawJson = "Pega un JSON válido.";
-    } else if (!parsedManualPayload.ok) {
-      errors.rawJson = parsedManualPayload.message;
-    }
+  if (!form.text.trim()) {
+    errors.text = "El enunciado es obligatorio.";
+  }
+
+  if (!String(form.order).trim()) {
+    errors.order = "El orden es obligatorio.";
   } else {
-    if (!form.text.trim()) {
-      errors.text = "El enunciado es obligatorio.";
+    const numericOrder = Number(form.order);
+    if (!Number.isInteger(numericOrder) || numericOrder < 1) {
+      errors.order = "El orden debe ser un entero mayor o igual que 1.";
     }
+  }
 
-    if (!String(form.order).trim()) {
-      errors.order = "El orden es obligatorio.";
-    } else {
-      const numericOrder = Number(form.order);
-      if (!Number.isInteger(numericOrder) || numericOrder < 1) {
-        errors.order = "El orden debe ser un entero mayor o igual que 1.";
-      }
-    }
+  const maxPts = Number(form.max_points);
+  if (!Number.isInteger(maxPts) || maxPts < 0 || maxPts > 100) {
+    errors.max_points = "La puntuación máxima debe ser un entero entre 0 y 100.";
+  }
 
-    const maxPts = Number(form.max_points);
-    if (!Number.isInteger(maxPts) || maxPts < 0 || maxPts > 100) {
-      errors.max_points = "La puntuación máxima debe ser un entero entre 0 y 100.";
-    }
-
-    if (form.type === "select" && splitLinesToList(form.options).length === 0) {
-      errors.options =
-        "Para el tipo select debes indicar una opción por línea.";
-    }
+  if (form.type === "select" && splitLinesToList(form.options).length === 0) {
+    errors.options = "Para el tipo select debes indicar una opción por línea.";
   }
 
   return errors;
+}
+
+function emptyForm(nextOrder = 1) {
+  return {
+    code: "",
+    text: "",
+    type: "text",
+    order: String(nextOrder),
+    required: true,
+    options: "",
+    max_points: "0",
+  };
 }
 
 export default function VacancyQuestionsPage() {
@@ -54,29 +58,37 @@ export default function VacancyQuestionsPage() {
 
   const { tenantId, pushFlash, setSelection } = useAppContext();
 
-  const [form, setForm] = useState({
-    code: "",
-    text: "",
-    type: "text",
-    order: "1",
-    required: true,
-    options: "",
-    max_points: "0",
-    manualJson: false,
-    rawJson: "",
-  });
+  const [existingQuestions, setExistingQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
 
+  const [form, setForm] = useState(() => emptyForm(1));
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null);
+  const [lastCreated, setLastCreated] = useState(null);
 
   useEffect(() => {
-    if (routeVacancyId) {
-      setSelection({
-        vacancyId: routeVacancyId,
-      });
-    }
+    if (routeVacancyId) setSelection({ vacancyId: routeVacancyId });
   }, [routeVacancyId, setSelection]);
+
+  const loadQuestions = useCallback(async () => {
+    if (!routeVacancyId) return;
+    try {
+      setQuestionsLoading(true);
+      const data = await listVacancyQuestions(routeVacancyId);
+      setExistingQuestions(Array.isArray(data) ? data : []);
+    } catch {
+      setExistingQuestions([]);
+    } finally {
+      setQuestionsLoading(false);
+    }
+  }, [routeVacancyId]);
+
+  useEffect(() => { loadQuestions(); }, [loadQuestions]);
+
+  const usedPoints = useMemo(
+    () => existingQuestions.reduce((s, q) => s + (q.max_points || 0), 0),
+    [existingQuestions]
+  );
 
   const computedPayload = useMemo(
     () =>
@@ -92,58 +104,9 @@ export default function VacancyQuestionsPage() {
     [form.code, form.text, form.type, form.required, form.order, form.options, form.max_points]
   );
 
-  const computedPayloadText = useMemo(
-    () => JSON.stringify(computedPayload, null, 2),
-    [computedPayload]
-  );
-
-  const parsedManualPayload = useMemo(() => {
-    if (!form.rawJson.trim()) {
-      return {
-        ok: false,
-        message: "El JSON está vacío.",
-      };
-    }
-
-    try {
-      const value = JSON.parse(form.rawJson);
-
-      if (!value || Array.isArray(value) || typeof value !== "object") {
-        return {
-          ok: false,
-          message: "El JSON debe representar un objeto.",
-        };
-      }
-
-      return {
-        ok: true,
-        value,
-      };
-    } catch {
-      return {
-        ok: false,
-        message: "El JSON no es válido.",
-      };
-    }
-  }, [form.rawJson]);
-
   function handleChange(event) {
     const { name, value, type, checked } = event.target;
-
-    setForm((current) => ({
-      ...current,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  }
-
-  function handleManualToggle(event) {
-    const checked = event.target.checked;
-
-    setForm((current) => ({
-      ...current,
-      manualJson: checked,
-      rawJson: checked && !current.rawJson ? computedPayloadText : current.rawJson,
-    }));
+    setForm((cur) => ({ ...cur, [name]: type === "checkbox" ? checked : value }));
   }
 
   function renderError(name) {
@@ -153,51 +116,20 @@ export default function VacancyQuestionsPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const nextErrors = validateQuestionForm({
-      routeVacancyId,
-      form,
-      parsedManualPayload,
-    });
-
+    const nextErrors = validateQuestionForm({ routeVacancyId, form });
     setErrors(nextErrors);
-
-    if (Object.keys(nextErrors).length > 0) {
-      return;
-    }
-
-    const payload = form.manualJson
-      ? parsedManualPayload.value
-      : computedPayload;
+    if (Object.keys(nextErrors).length > 0) return;
 
     try {
       setSubmitting(true);
-
-      const createdQuestion = await createVacancyQuestion(
-        routeVacancyId,
-        tenantId,
-        payload
-      );
-
-      setResult(createdQuestion);
-
+      const created = await createVacancyQuestion(routeVacancyId, tenantId, computedPayload);
+      setLastCreated(created);
       pushFlash("message", "Pregunta creada correctamente.");
-
-      setForm((current) => ({
-        ...current,
-        code: "",
-        text: "",
-        order: String(Number(current.order || 1) + 1),
-        options: "",
-        max_points: "0",
-        manualJson: false,
-        rawJson: "",
-      }));
-
+      setForm(emptyForm(Number(form.order || 1) + 1));
       setErrors({});
+      await loadQuestions();
     } catch (error) {
-      setErrors({
-        submit: error.message || "No se pudo crear la pregunta.",
-      });
+      setErrors({ submit: error.message || "No se pudo crear la pregunta." });
     } finally {
       setSubmitting(false);
     }
@@ -208,21 +140,18 @@ export default function VacancyQuestionsPage() {
       <section className="card">
         <div className="row-space">
           <div>
-            <h1 className="h1">Nueva pregunta</h1>
+            <h1 className="h1">Preguntas de la vacante</h1>
             <p className="muted">
-              Vacante actual: <strong>{routeVacancyId || "No definida"}</strong>
+              Vacante: <strong>{routeVacancyId || "No definida"}</strong>
             </p>
           </div>
-
           <div className="row">
-            <Link className="btn" to="/dashboard">
-              Dashboard
-            </Link>
-
+            <Link className="btn" to="/dashboard">Dashboard</Link>
             {routeVacancyId ? (
-              <Link className="btn" to={`/ranking?vacancyId=${routeVacancyId}`}>
-                Ver ranking
-              </Link>
+              <Link className="btn" to={`/vacancies/${routeVacancyId}/edit`}>Editar vacante</Link>
+            ) : null}
+            {routeVacancyId ? (
+              <Link className="btn" to={`/ranking?vacancyId=${routeVacancyId}`}>Ver ranking</Link>
             ) : null}
           </div>
         </div>
@@ -230,12 +159,46 @@ export default function VacancyQuestionsPage() {
 
       {!routeVacancyId ? (
         <div className="error-box">
-          No se ha podido identificar la vacante. Accede a esta pantalla desde el dashboard o el listado de vacantes.
+          No se ha podido identificar la vacante. Accede a esta pantalla desde el dashboard.
         </div>
       ) : null}
 
+      {/* ── Preguntas existentes ─────────────────────────────── */}
       <section className="card">
-        {/* Formulario de creación de pregunta para la vacante activa */}
+        <div className="row-space" style={{ marginBottom: 16 }}>
+          <h2 className="h2">Preguntas configuradas</h2>
+          <span className="muted" style={{ fontSize: "0.9rem" }}>
+            Puntos asignados en preguntas: <strong>{usedPoints}</strong>
+          </span>
+        </div>
+
+        {questionsLoading ? (
+          <p className="muted">Cargando preguntas…</p>
+        ) : existingQuestions.length === 0 ? (
+          <p className="muted">Esta vacante aún no tiene preguntas configuradas.</p>
+        ) : (
+          <div className="question-list">
+            {existingQuestions.map((q) => (
+              <div key={q.vq_id} className="question-row">
+                <span className="question-row-info">
+                  <span className="question-row-title">
+                    {q.question_order}. {q.prompt_text}
+                  </span>
+                  <span className="question-row-meta">
+                    {q.answer_type} · campo: {q.field_key}
+                    {!q.required ? " · opcional" : ""}
+                  </span>
+                </span>
+                <span className="question-row-points">{q.max_points} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Formulario nueva pregunta ────────────────────────── */}
+      <section className="card">
+        <h2 className="h2" style={{ marginBottom: 16 }}>Añadir pregunta</h2>
 
         {renderError("submit")}
 
@@ -248,23 +211,17 @@ export default function VacancyQuestionsPage() {
                 name="code"
                 value={form.code}
                 onChange={handleChange}
-                placeholder="Opcional. Identificador interno de la pregunta."
+                placeholder="Opcional. Identificador interno."
               />
             </label>
 
             <label className="label">
               Tipo
-              <select
-                className="input"
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-              >
-                <option value="text">text</option>
-                <option value="textarea">textarea</option>
-                <option value="number">number</option>
-                <option value="boolean">boolean</option>
-                <option value="select">select</option>
+              <select className="input" name="type" value={form.type} onChange={handleChange}>
+                <option value="text">Texto libre</option>
+                <option value="number">Número</option>
+                <option value="boolean">Sí / No</option>
+                <option value="select">Selección</option>
               </select>
             </label>
           </div>
@@ -310,56 +267,39 @@ export default function VacancyQuestionsPage() {
             </label>
           </div>
 
-          <label className="label">
-            Opciones
-            <textarea
-              className="textarea"
-              name="options"
-              value={form.options}
-              onChange={handleChange}
-              placeholder="Solo para preguntas tipo select. Una opción por línea."
-            />
-          </label>
-          {renderError("options")}
+          {form.type === "select" ? (
+            <>
+              <label className="label">
+                Opciones
+                <textarea
+                  className="textarea"
+                  name="options"
+                  value={form.options}
+                  onChange={handleChange}
+                  placeholder="Una opción por línea."
+                />
+              </label>
+              {renderError("options")}
+            </>
+          ) : null}
 
           <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={form.manualJson}
-              onChange={handleManualToggle}
-            />
-            <span>Editar JSON manualmente</span>
+            <input type="checkbox" name="required" checked={form.required} onChange={handleChange} />
+            <span>Pregunta obligatoria</span>
           </label>
-
-          <label className="label">
-            JSON a enviar
-            <textarea
-              className="textarea"
-              name="rawJson"
-              value={form.manualJson ? form.rawJson : computedPayloadText}
-              onChange={handleChange}
-              readOnly={!form.manualJson}
-              placeholder="El JSON calculado aparecerá aquí."
-            />
-          </label>
-          {renderError("rawJson")}
-
-          <div className="notice">
-            El JSON generado puede editarse manualmente si la configuración de la vacante requiere campos adicionales.
-          </div>
 
           <div className="form-actions">
             <button className="btn primary" type="submit" disabled={submitting}>
-              {submitting ? "Guardando..." : "Guardar pregunta"}
+              {submitting ? "Guardando…" : "Añadir pregunta"}
             </button>
           </div>
         </form>
       </section>
 
-      {result ? (
+      {lastCreated ? (
         <section className="card">
-          <h2 className="h2">Pregunta registrada</h2>
-          <pre className="code-block">{JSON.stringify(result, null, 2)}</pre>
+          <h2 className="h2">Última pregunta registrada</h2>
+          <pre className="code-block">{JSON.stringify(lastCreated, null, 2)}</pre>
         </section>
       ) : null}
     </>

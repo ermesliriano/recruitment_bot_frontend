@@ -213,6 +213,34 @@ export async function createVacancy(payload, options = {}) {
   });
 }
 
+export async function getVacancy(vacancyId, options = {}) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}`,
+    { method: "GET", token: options.token }
+  );
+}
+
+export async function updateVacancy(vacancyId, payload, options = {}) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}`,
+    { method: "PUT", body: payload, token: options.token }
+  );
+}
+
+export async function setVacancyStatus(vacancyId, status, options = {}) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}/status`,
+    { method: "PATCH", body: { status }, token: options.token }
+  );
+}
+
+export async function listVacancyQuestions(vacancyId, options = {}) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}/questions`,
+    { method: "GET", token: options.token }
+  );
+}
+
 export function buildQuestionPayload({
   tenantId,
   code,

@@ -7,6 +7,7 @@ import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import RankingPage from "./pages/RankingPage";
 import SignupPage from "./pages/SignupPage";
+import VacancyEditPage from "./pages/VacancyEditPage";
 import VacancyFormPage from "./pages/VacancyFormPage";
 import VacancyQuestionsPage from "./pages/VacancyQuestionsPage";
 
@@ -38,6 +39,7 @@ export default function App() {
                 element={<ApplicationDetailPage />}
               />
               <Route path="/vacancies/new" element={<VacancyFormPage />} />
+              <Route path="/vacancies/:vacancyId/edit" element={<VacancyEditPage />} />
               <Route
                 path="/vacancies/:vacancyId/questions"
                 element={<VacancyQuestionsPage />}
