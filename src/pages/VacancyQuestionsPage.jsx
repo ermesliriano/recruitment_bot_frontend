@@ -282,6 +282,78 @@ export default function VacancyQuestionsPage() {
         )}
       </section>
 
+{editingQuestion ? (
+  <section className="card">
+    <h2 className="h2" style={{ marginBottom: 16 }}>
+      Editar pregunta
+    </h2>
+
+    {renderError("submit")}
+
+    <form className="form" onSubmit={handleUpdateQuestion} noValidate>
+      <label className="label">
+        Enunciado mostrado
+        <textarea
+          className="textarea"
+          name="prompt_override"
+          value={editingQuestion.prompt_override}
+          onChange={handleEditChange}
+          placeholder="Texto que verá la persona candidata."
+        />
+      </label>
+
+      <div className="form-grid grid-2">
+        <label className="label">
+          Orden
+          <input
+            className="input"
+            type="number"
+            min="1"
+            name="question_order"
+            value={editingQuestion.question_order}
+            onChange={handleEditChange}
+          />
+          {renderError("question_order")}
+        </label>
+
+        <label className="label">
+          Puntuación máxima
+          <input
+            className="input"
+            type="number"
+            min="0"
+            max="100"
+            name="max_points"
+            value={editingQuestion.max_points}
+            onChange={handleEditChange}
+          />
+          {renderError("max_points")}
+        </label>
+      </div>
+
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          name="required"
+          checked={editingQuestion.required}
+          onChange={handleEditChange}
+        />
+        <span>Pregunta obligatoria</span>
+      </label>
+
+      <div className="form-actions">
+        <button className="btn primary" type="submit" disabled={updatingQuestion}>
+          {updatingQuestion ? "Guardando…" : "Guardar cambios"}
+        </button>
+
+        <button className="btn" type="button" onClick={handleCancelEdit}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </section>
+) : null}
+      
       {/* ── Formulario nueva pregunta ────────────────────────── */}
       <section className="card">
         <h2 className="h2" style={{ marginBottom: 16 }}>Añadir pregunta</h2>
