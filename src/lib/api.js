@@ -255,22 +255,22 @@ function normalizeAnswerType(type) {
   const value = String(type || "text").trim().toLowerCase();
 
   if (value === "textarea") {
-    return "TEXT";
+    return "text";
   }
 
   if (value === "select") {
-    return "TEXT";
+    return "text";
   }
 
   if (value === "boolean") {
-    return "BOOLEAN";
+    return "boolean";
   }
 
   if (value === "number") {
-    return "NUMBER";
+    return "number";
   }
 
-  return "TEXT";
+  return "text";
 }
 
 function buildValidation(type, options) {
