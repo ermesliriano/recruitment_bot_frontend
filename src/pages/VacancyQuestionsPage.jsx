@@ -256,7 +256,6 @@ export default function VacancyQuestionsPage() {
         ) : (
           <div className="question-list">
             {existingQuestions.map((q) => (
-{existingQuestions.map((q) => (
   <div key={q.vq_id} className="question-row">
     <span className="question-row-info">
       <span className="question-row-title">
