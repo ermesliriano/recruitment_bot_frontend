@@ -322,7 +322,7 @@ export default function VacancyFormPage() {
                 className="input"
                 type="number"
                 min="1"
-                max="99"
+                max="100"
                 name="cv_max_score"
                 value={form.cv_max_score}
                 onChange={handleChange}
