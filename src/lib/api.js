@@ -214,6 +214,7 @@ export async function createVacancy(payload, options = {}) {
 }
 
 export function buildQuestionPayload({
+  tenantId,
   code,
   text,
   type,
@@ -222,31 +223,83 @@ export function buildQuestionPayload({
   options,
   max_points,
 }) {
-  const payload = {
-    text: String(text || "").trim(),
-    type: String(type || "text").trim(),
-    required: Boolean(required),
-    order:
+  const normalizedCode = String(code || "").trim();
+  const normalizedText = String(text || "").trim();
+
+  const normalizedAnswerType = normalizeAnswerType(type);
+
+  return {
+    tenant_id: String(tenantId || "").trim(),
+    code: normalizedCode || `q_${Date.now()}`,
+    prompt_text: normalizedText,
+    answer_type: normalizedAnswerType,
+
+    question_order:
       Number.isFinite(Number(order)) && Number(order) > 0
         ? Number(order)
         : 1,
+
+    field_key: normalizedCode || `q_${Date.now()}`,
+
+    prompt_override: null,
+    validation: buildValidation(type, options),
+    required: Boolean(required),
+    scoring_enabled: true,
     max_points:
       Number.isFinite(Number(max_points)) && Number(max_points) >= 0
         ? Number(max_points)
         : 0,
   };
+}
 
-  const normalizedCode = String(code || "").trim();
-  if (normalizedCode) {
-    payload.code = normalizedCode;
+function normalizeAnswerType(type) {
+  const value = String(type || "text").trim().toLowerCase();
+
+  if (value === "textarea") {
+    return "text";
   }
 
-  const normalizedOptions = splitLinesToList(options);
-  if (normalizedOptions.length > 0) {
-    payload.options = normalizedOptions;
+  if (value === "select") {
+    return "text";
   }
 
-  return payload;
+  if (value === "boolean") {
+    return "boolean";
+  }
+
+  if (value === "number") {
+    return "number";
+  }
+
+  return "text";
+}
+
+function buildValidation(type, options) {
+  const value = String(type || "").trim().toLowerCase();
+
+  if (value === "boolean") {
+    return {
+      true_values: ["si", "sí", "s", "yes", "true"],
+      false_values: ["no", "n", "false"],
+    };
+  }
+
+  if (value === "number") {
+    return {
+      min: 0,
+      max: 100,
+    };
+  }
+
+  const optionList = splitLinesToList(options);
+
+  if (value === "select" && optionList.length > 0) {
+    return {
+      options: optionList,
+    };
+  }
+
+  return {};
 }
 
 export async function createVacancyQuestion(

@@ -89,7 +89,7 @@ export default function VacancyQuestionsPage() {
         options: form.options,
         max_points: form.max_points,
       }),
-    [form.code, form.text, form.type, form.required, form.order, form.options, form.max_points]
+    [tenantId, form.code, form.text, form.type, form.required, form.order, form.options, form.max_points]
   );
 
   const computedPayloadText = useMemo(
