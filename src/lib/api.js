@@ -346,6 +346,22 @@ export async function createVacancyQuestion(
   );
 }
 
+export async function updateVacancyQuestion(
+  vacancyId,
+  vqId,
+  payload,
+  options = {}
+) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}/questions/${encodeURIComponent(String(vqId).trim())}`,
+    {
+      method: "PATCH",
+      body: payload,
+      token: options.token,
+    }
+  );
+}
+
 export async function probeAdminToken({
   tenantId,
   vacancyId,
