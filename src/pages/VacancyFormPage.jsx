@@ -20,9 +20,9 @@ function validateVacancyForm({ tenantId, form }) {
   }
 
   const cvMaxScore = Number(form.cv_max_score);
-  if (!Number.isInteger(cvMaxScore) || cvMaxScore < 1 || cvMaxScore > 99) {
+  if (!Number.isInteger(cvMaxScore) || cvMaxScore < 1 || cvMaxScore > 100) {
     errors.cv_max_score =
-      "La puntuación máxima del CV debe ser un entero entre 1 y 99.";
+      "La puntuación máxima del CV debe ser un entero entre 1 y 100.";
   }
 
   const review = Number(form.review);
