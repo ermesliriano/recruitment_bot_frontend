@@ -280,20 +280,18 @@ export default function DashboardPage() {
                 <button className="btn small" type="button" onClick={() => handleEdit(row)}>
                   Editar
                 </button>
-                {status !== "archived" ? (
-                  <button
-                    className={`btn small${status === "active" ? "" : " primary"}`}
-                    type="button"
-                    disabled={isActivating}
-                    onClick={() => handleToggleStatus(row)}
-                  >
-                    {isActivating
-                      ? "…"
-                      : status === "active"
-                      ? "Archivar"
-                      : "Activar"}
-                  </button>
-                ) : null}
+                <button
+                  className={`btn small${status === "active" ? "" : " primary"}`}
+                  type="button"
+                  disabled={isActivating}
+                  onClick={() => handleToggleStatus(row)}
+                >
+                  {isActivating
+                    ? "…"
+                    : status === "active"
+                    ? "Archivar"
+                    : "Activar"}
+                </button>
               </div>
             );
           }}
