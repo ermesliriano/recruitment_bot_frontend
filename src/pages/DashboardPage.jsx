@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Modal from "../components/Modal";
+import VacancyBudgetModal from "../components/VacancyBudgetModal";
 import StatCard from "../components/StatCard";
 import Table from "../components/Table";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
 import { getRanking, listVacancyQuestions, setVacancyStatus } from "../lib/api";
+import { getVacancyBudget } from "../lib/scoringBudget";
 
 export default function DashboardPage() {
   const {
@@ -106,11 +107,17 @@ export default function DashboardPage() {
     try {
       setActivating(row.id);
       const questions = await listVacancyQuestions(row.id);
-      const questionsTotal = questions.reduce((s, q) => s + (q.max_points || 0), 0);
-      const total = (row.cv_max_score || 0) + questionsTotal;
+      const budget = getVacancyBudget({
+        vacancy: row,
+        questions,
+      });
 
-      if (total !== 100) {
-        setBudgetModal({ vacancy: row, total, questionsTotal });
+      if (!budget.isValid) {
+        setBudgetModal({
+          vacancy: row,
+          total: budget.total,
+          questionsTotal: budget.questionsTotal,
+        });
         return;
       }
 
@@ -144,38 +151,18 @@ export default function DashboardPage() {
   return (
     <>
       {budgetModal ? (
-        <Modal
-          title="No se puede activar la vacante"
+        <VacancyBudgetModal
+          vacancy={budgetModal.vacancy}
+          total={budgetModal.total}
+          questionsTotal={budgetModal.questionsTotal}
           onClose={() => setBudgetModal(null)}
-          actions={
-            <>
-              <button className="btn primary" onClick={() => {
-                navigate(`/vacancies/${budgetModal.vacancy.id}/questions`);
-                setBudgetModal(null);
-              }}>
-                Ir a preguntas
-              </button>
-              <button className="btn" onClick={() => setBudgetModal(null)}>
-                Cerrar
-              </button>
-            </>
-          }
-        >
-          <p>
-            La suma de puntuaciones máximas debe ser exactamente{" "}
-            <strong>100 puntos</strong>, pero la configuración actual suma{" "}
-            <strong>{budgetModal.total} puntos</strong>:
-          </p>
-          <ul style={{ margin: "8px 0", paddingLeft: 20, lineHeight: 1.8 }}>
-            <li>Puntuación máxima del CV: <strong>{budgetModal.vacancy.cv_max_score}</strong></li>
-            <li>Suma de preguntas: <strong>{budgetModal.questionsTotal}</strong></li>
-          </ul>
-          <p className="muted" style={{ marginTop: 4 }}>
-            Ajusta los valores en la edición de la vacante o en sus preguntas hasta alcanzar los 100 puntos.
-          </p>
-        </Modal>
+          onGoToQuestions={() => {
+            navigate(`/vacancies/${budgetModal.vacancy.id}/questions`);
+            setBudgetModal(null);
+          }}
+        />
       ) : null}
-
+		
       <section className="card">
         <h1 className="h1">Dashboard</h1>
         <p className="muted">
