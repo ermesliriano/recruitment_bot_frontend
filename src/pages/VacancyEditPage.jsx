@@ -2,7 +2,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { getVacancy, splitLinesToList, updateVacancy } from "../lib/api";
+import VacancyBudgetModal from "../components/VacancyBudgetModal";
+import {
+  getVacancy,
+  listVacancyQuestions,
+  splitLinesToList,
+  updateVacancy,
+} from "../lib/api";
+import { getVacancyBudget, isActiveVacancy } from "../lib/scoringBudget";
 
 function validateForm(form) {
   const errors = {};
@@ -11,8 +18,8 @@ function validateForm(form) {
   if (!form.description.trim()) errors.description = "La descripción es obligatoria.";
 
   const cvMaxScore = Number(form.cv_max_score);
-  if (!Number.isInteger(cvMaxScore) || cvMaxScore < 1 || cvMaxScore > 99) {
-    errors.cv_max_score = "La puntuación máxima del CV debe ser un entero entre 1 y 99.";
+  if (!Number.isInteger(cvMaxScore) || cvMaxScore < 0 || cvMaxScore > 100) {
+    errors.cv_max_score = "La puntuación máxima del CV debe ser un entero entre 0 y 100.";
   }
 
   const review = Number(form.review);
@@ -40,6 +47,8 @@ export default function VacancyEditPage() {
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loadedVacancy, setLoadedVacancy] = useState(null);
+  const [budgetModal, setBudgetModal] = useState(null);
 
   const [form, setForm] = useState({
     code: "",
@@ -69,6 +78,8 @@ export default function VacancyEditPage() {
         const v = await getVacancy(vacancyId);
         if (ignore) return;
 
+        setLoadedVacancy(v);
+        
         const thresholds = v.classification_thresholds || { review: 35, interview: 60, shortlist: 75 };
 
         setForm({
@@ -132,6 +143,43 @@ export default function VacancyEditPage() {
       },
     };
 
+    if (isActiveVacancy(loadedVacancy)) {
+      try {
+        setSubmitting(true);
+
+        const questions = await listVacancyQuestions(vacancyId);
+        const budget = getVacancyBudget({
+          vacancy: {
+            ...loadedVacancy,
+            cv_max_score: Number(form.cv_max_score),
+          },
+          questions,
+        });
+
+        if (!budget.isValid) {
+          setBudgetModal({
+            vacancy: {
+              ...loadedVacancy,
+              cv_max_score: Number(form.cv_max_score),
+            },
+            total: budget.total,
+            questionsTotal: budget.questionsTotal,
+          });
+
+          return;
+        }
+      } catch (err) {
+        setErrors({
+          submit:
+            err.message ||
+            "No se pudo validar la puntuación máxima antes de guardar.",
+        });
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    }
+    
     try {
       setSubmitting(true);
       await updateVacancy(vacancyId, payload);
@@ -165,6 +213,19 @@ export default function VacancyEditPage() {
 
   return (
     <>
+      {budgetModal ? (
+        <VacancyBudgetModal
+        vacancy={budgetModal.vacancy}
+        total={budgetModal.total}
+        questionsTotal={budgetModal.questionsTotal}
+        onClose={() => setBudgetModal(null)}
+        onGoToQuestions={() => {
+          navigate(`/vacancies/${vacancyId}/questions`);
+          setBudgetModal(null);
+        }}
+      />
+    ) : null}
+      
       <section className="card">
         <div className="row-space">
           <div>
@@ -247,8 +308,8 @@ export default function VacancyEditPage() {
               <input
                 className="input"
                 type="number"
-                min="1"
-                max="99"
+                min="0"
+                max="100"
                 name="cv_max_score"
                 value={form.cv_max_score}
                 onChange={handleChange}
