@@ -9,7 +9,7 @@ import {
   updateVacancyQuestion,
 } from "../lib/api";
 
-function validateQuestionForm({ routeVacancyId, form }) {
+function validateQuestionForm({ routeVacancyId, form, existingQuestions = [] }) {
   const errors = {};
 
   if (!routeVacancyId) {
@@ -24,8 +24,17 @@ function validateQuestionForm({ routeVacancyId, form }) {
     errors.order = "El orden es obligatorio.";
   } else {
     const numericOrder = Number(form.order);
+
     if (!Number.isInteger(numericOrder) || numericOrder < 1) {
       errors.order = "El orden debe ser un entero mayor o igual que 1.";
+    } else {
+      const duplicatedOrder = existingQuestions.some(
+        (question) => Number(question.question_order) === numericOrder
+      );
+
+      if (duplicatedOrder) {
+        errors.order = `Ya existe una pregunta con el orden ${numericOrder}. Usa otro número o edita la pregunta existente.`;
+      }
     }
   }
 
@@ -51,6 +60,22 @@ function emptyForm(nextOrder = 1) {
     options: "",
     max_points: "0",
   };
+}
+
+function getNextAvailableOrder(questions = []) {
+  const usedOrders = new Set(
+    questions
+      .map((question) => Number(question.question_order))
+      .filter((order) => Number.isInteger(order) && order > 0)
+  );
+
+  let nextOrder = 1;
+
+  while (usedOrders.has(nextOrder)) {
+    nextOrder += 1;
+  }
+
+  return nextOrder;
 }
 
 export default function VacancyQuestionsPage() {
@@ -79,7 +104,20 @@ export default function VacancyQuestionsPage() {
     try {
       setQuestionsLoading(true);
       const data = await listVacancyQuestions(routeVacancyId);
-      setExistingQuestions(Array.isArray(data) ? data : []);
+      const normalizedQuestions = Array.isArray(data) ? data : [];
+
+      setExistingQuestions(normalizedQuestions);
+
+      setForm((currentForm) => {
+        if (currentForm.text.trim()) {
+          return currentForm;
+        }
+
+        return {
+          ...currentForm,
+          order: String(getNextAvailableOrder(normalizedQuestions)),
+        };
+      });
     } catch {
       setExistingQuestions([]);
     } finally {
@@ -120,7 +158,7 @@ export default function VacancyQuestionsPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const nextErrors = validateQuestionForm({ routeVacancyId, form });
+    const nextErrors = validateQuestionForm({ routeVacancyId, form, existingQuestions, });
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
