@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import VacancyBudgetModal from "../components/VacancyBudgetModal";
 import {
   buildQuestionPayload,
   createVacancyQuestion,
+  getVacancy,
   listVacancyQuestions,
   splitLinesToList,
   updateVacancyQuestion,
 } from "../lib/api";
+import { getVacancyBudget, isActiveVacancy } from "../lib/scoringBudget";
 
 function validateQuestionForm({ routeVacancyId, form, existingQuestions = [] }) {
   const errors = {};
@@ -87,6 +90,9 @@ export default function VacancyQuestionsPage() {
   const [existingQuestions, setExistingQuestions] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
 
+  const [vacancy, setVacancy] = useState(null);
+  const [budgetModal, setBudgetModal] = useState(null);
+
   const [form, setForm] = useState(() => emptyForm(1));
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -99,6 +105,31 @@ export default function VacancyQuestionsPage() {
     if (routeVacancyId) setSelection({ vacancyId: routeVacancyId });
   }, [routeVacancyId, setSelection]);
 
+  useEffect(() => {
+    if (!routeVacancyId) return;
+
+    let ignore = false;
+
+    async function loadVacancy() {
+      try {
+        const data = await getVacancy(routeVacancyId);
+        if (!ignore) {
+          setVacancy(data);
+        }
+      } catch {
+        if (!ignore) {
+          setVacancy(null);
+        }
+      }
+    }
+
+    loadVacancy();
+
+    return () => {
+      ignore = true;
+    };
+  }, [routeVacancyId]);
+  
   const loadQuestions = useCallback(async () => {
     if (!routeVacancyId) return;
     try {
@@ -155,6 +186,29 @@ export default function VacancyQuestionsPage() {
     return errors[name] ? <div className="field-error">{errors[name]}</div> : null;
   }
 
+  function validateActiveVacancyBudget(nextQuestions) {
+    if (!isActiveVacancy(vacancy)) {
+      return true;
+    }
+
+    const budget = getVacancyBudget({
+      vacancy,
+      questions: nextQuestions,
+    });
+
+    if (!budget.isValid) {
+      setBudgetModal({
+        vacancy,
+        total: budget.total,
+        questionsTotal: budget.questionsTotal,
+      });
+
+      return false;
+    }
+
+    return true;
+  }
+  
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -162,6 +216,17 @@ export default function VacancyQuestionsPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
+    const nextQuestions = [
+      ...existingQuestions,
+      {
+        max_points: Number(computedPayload.max_points) || 0,
+      },
+    ];
+
+    if (!validateActiveVacancyBudget(nextQuestions)) {
+      return;
+    }
+    
     try {
       setSubmitting(true);
       const created = await createVacancyQuestion(routeVacancyId, tenantId, computedPayload);
@@ -227,6 +292,19 @@ export default function VacancyQuestionsPage() {
       return;
     }
 
+    const nextQuestions = existingQuestions.map((question) =>
+      question.vq_id === editingQuestion.vq_id
+        ? {
+            ...question,
+            max_points: maxPoints,
+          }
+        : question
+    );
+
+    if (!validateActiveVacancyBudget(nextQuestions)) {
+      return;
+    }
+    
     try {
       setUpdatingQuestion(true);
 
@@ -252,6 +330,17 @@ export default function VacancyQuestionsPage() {
   
   return (
     <>
+
+      {budgetModal ? (
+        <VacancyBudgetModal
+          vacancy={budgetModal.vacancy}
+          total={budgetModal.total}
+          questionsTotal={budgetModal.questionsTotal}
+          onClose={() => setBudgetModal(null)}
+          onGoToQuestions={() => setBudgetModal(null)}
+        />
+      ) : null}
+      
       <section className="card">
         <div className="row-space">
           <div>
