@@ -268,9 +268,9 @@ export default function DashboardPage() {
             const isActivating = activating === row.id;
             return (
               <div className="table-actions">
-                // <button className="btn small" type="button" onClick={() => handleUseVacancy(row)}>
-                  // Usar
-                // </button>
+			  {/*<button className="btn small" type="button" onClick={() => handleUseVacancy(row)}>
+                  Usar
+			  </button>*/}
                 <button className="btn small primary" type="button" onClick={() => handleOpenRanking(row)}>
                   Ranking
                 </button>
