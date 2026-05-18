@@ -5,6 +5,7 @@ import VacancyBudgetModal from "../components/VacancyBudgetModal";
 import {
   buildQuestionPayload,
   createVacancyQuestion,
+  deleteVacancyQuestion,
   getVacancy,
   listVacancyQuestions,
   splitLinesToList,
@@ -100,6 +101,7 @@ export default function VacancyQuestionsPage() {
 
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [updatingQuestion, setUpdatingQuestion] = useState(false);
+  const [deletingQuestionId, setDeletingQuestionId] = useState(null);
 
   useEffect(() => {
     if (routeVacancyId) setSelection({ vacancyId: routeVacancyId });
@@ -239,6 +241,32 @@ export default function VacancyQuestionsPage() {
       setErrors({ submit: error.message || "No se pudo crear la pregunta." });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteQuestion(question) {
+    const label = question.prompt_override || question.prompt_text || "esta pregunta";
+    const confirmed = window.confirm(
+      `¿Seguro que quieres eliminar esta pregunta?\n\n“${label}”`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingQuestionId(question.vq_id);
+      await deleteVacancyQuestion(routeVacancyId, question.vq_id);
+      pushFlash("message", "Pregunta eliminada correctamente.");
+      if (editingQuestion?.vq_id === question.vq_id) {
+        setEditingQuestion(null);
+      }
+      await loadQuestions();
+    } catch (error) {
+      setErrors({
+        submit:
+          error.message ||
+          "No se pudo eliminar la pregunta. Si la vacante está activa, revisa que la suma de puntos siga siendo exactamente 100.",
+      });
+    } finally {
+      setDeletingQuestionId(null);
     }
   }
 
@@ -402,6 +430,16 @@ export default function VacancyQuestionsPage() {
       onClick={() => handleStartEdit(q)}
     >
       Editar
+    </button>
+    <button
+      className="btn small danger"
+      type="button"
+      title="Eliminar pregunta"
+      aria-label={`Eliminar pregunta ${q.question_order}`}
+      disabled={deletingQuestionId === q.vq_id}
+      onClick={() => handleDeleteQuestion(q)}
+    >
+      {deletingQuestionId === q.vq_id ? "…" : "🗑️"}
     </button>
   </div>
 ))}

@@ -689,3 +689,29 @@ select.input:focus {
   font-size: 1rem;
   color: var(--primary);
 }
+
+/* ── Danger button ────────────────────────────────────────── */
+
+.btn.danger {
+  border-color: #fca5a5;
+  color: var(--danger);
+  background: #fff;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #b91c1c;
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.1);
+}
+
+.btn.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn.small.danger {
+  min-width: 36px;
+  padding-inline: 10px;
+}

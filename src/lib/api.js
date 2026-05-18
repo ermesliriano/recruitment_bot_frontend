@@ -72,6 +72,14 @@ function extractErrorMessage(body, response) {
     return body.detail;
   }
 
+  if (
+    typeof body.detail === "object" &&
+    body.detail !== null &&
+    typeof body.detail.message === "string"
+  ) {
+    return body.detail.message;
+  }
+
   if (typeof body.error === "string") {
     return body.error;
   }
@@ -357,6 +365,26 @@ export async function updateVacancyQuestion(
     {
       method: "PATCH",
       body: payload,
+      token: options.token,
+    }
+  );
+}
+
+export async function deleteVacancy(vacancyId, options = {}) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}`,
+    {
+      method: "DELETE",
+      token: options.token,
+    }
+  );
+}
+
+export async function deleteVacancyQuestion(vacancyId, vqId, options = {}) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}/questions/${encodeURIComponent(String(vqId).trim())}`,
+    {
+      method: "DELETE",
       token: options.token,
     }
   );

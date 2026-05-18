@@ -5,7 +5,7 @@ import StatCard from "../components/StatCard";
 import Table from "../components/Table";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
-import { getRanking, listVacancyQuestions, setVacancyStatus } from "../lib/api";
+import { getRanking, listVacancyQuestions, setVacancyStatus, deleteVacancy } from "../lib/api";
 import { getVacancyBudget } from "../lib/scoringBudget";
 
 export default function DashboardPage() {
@@ -28,6 +28,7 @@ export default function DashboardPage() {
   // Modal de presupuesto (activar vacante DRAFT con suma != 100)
   const [budgetModal, setBudgetModal] = useState(null); // { vacancy, total }
   const [activating, setActivating] = useState(null); // id en proceso
+  const [deletingVacancyId, setDeletingVacancyId] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -83,6 +84,27 @@ export default function DashboardPage() {
 
   function handleEdit(row) {
     navigate(`/vacancies/${row.id}/edit`);
+  }
+
+  async function handleDeleteVacancy(row) {
+    const confirmed = window.confirm(
+      `¿Seguro que quieres eliminar la vacante "${row.title}"?\n\nEsta acción eliminará también todas sus preguntas asociadas y no podrá deshacerse.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingVacancyId(row.id);
+      await deleteVacancy(row.id);
+      setVacancies((current) => current.filter((v) => v.id !== row.id));
+      if (vacancyId === row.id) {
+        setSelection({ vacancyId: "" });
+      }
+      pushFlash("message", `Vacante "${row.title}" eliminada correctamente.`);
+    } catch (error) {
+      pushFlash("error", error.message || "No se pudo eliminar la vacante.");
+    } finally {
+      setDeletingVacancyId(null);
+    }
   }
 
   async function handleToggleStatus(row) {
@@ -266,6 +288,16 @@ export default function DashboardPage() {
                 </button>
                 <button className="btn small" type="button" onClick={() => handleEdit(row)}>
                   Editar
+                </button>
+                <button
+                  className="btn small danger"
+                  type="button"
+                  title="Eliminar vacante"
+                  aria-label={`Eliminar vacante ${row.title}`}
+                  disabled={deletingVacancyId === row.id}
+                  onClick={() => handleDeleteVacancy(row)}
+                >
+                  {deletingVacancyId === row.id ? "…" : "🗑️"}
                 </button>
                 <button
                   className={`btn small${status === "active" ? "" : " primary"}`}
