@@ -390,6 +390,29 @@ export async function deleteVacancyQuestion(vacancyId, vqId, options = {}) {
   );
 }
 
+/**
+ * Llama al endpoint que genera preguntas de screening automáticamente
+ * a partir de los requisitos obligatorios de la vacante usando el LLM.
+ *
+ * Solo disponible si la vacante tiene entre 1 y 10 requisitos obligatorios
+ * y no tiene preguntas activas previas.
+ */
+export async function generateVacancyQuestionsFromRequirements(
+  vacancyId,
+  tenantId,
+  options = {}
+) {
+  return apiFetch(
+    `/vacancies/${encodeURIComponent(String(vacancyId).trim())}/questions/generate-from-requirements`,
+    {
+      method: "POST",
+      query: { tenant_id: tenantId },
+      body: { force: false },
+      token: options.token,
+    }
+  );
+}
+
 export async function probeAdminToken({
   tenantId,
   vacancyId,

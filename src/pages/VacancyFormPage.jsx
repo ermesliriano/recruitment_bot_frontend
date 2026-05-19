@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import GenerateQuestionsProposalModal from "../components/GenerateQuestionsProposalModal";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
-import { createVacancy, splitLinesToList } from "../lib/api";
+import {
+  createVacancy,
+  generateVacancyQuestionsFromRequirements,
+  splitLinesToList,
+} from "../lib/api";
 
 function validateVacancyForm({ tenantId, form }) {
   const errors = {};
@@ -68,6 +73,11 @@ export default function VacancyFormPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Estado para el modal de propuesta de generación automática.
+  // Cuando no es null, contiene { vacancy, requirements }.
+  const [generationProposal, setGenerationProposal] = useState(null);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -81,6 +91,53 @@ export default function VacancyFormPage() {
     return errors[name] ? <div className="field-error">{errors[name]}</div> : null;
   }
 
+  // ── Handlers del modal de generación automática ────────────────────────────────
+
+  async function handleAcceptGenerationProposal() {
+    if (!generationProposal?.vacancy?.id) return;
+
+    try {
+      setGeneratingQuestions(true);
+
+      const result = await generateVacancyQuestionsFromRequirements(
+        generationProposal.vacancy.id,
+        tenantId
+      );
+
+      pushFlash(
+        "message",
+        `Se generaron ${result?.created_count ?? 0} preguntas automáticamente con IA.`
+      );
+    } catch (error) {
+      // La vacante ya se creó correctamente; solo fallaron las preguntas.
+      // Informamos pero continuamos a la página de preguntas para que el
+      // usuario pueda configurarlas manualmente.
+      pushFlash(
+        "error",
+        error.message ||
+          "La vacante se creó, pero no se pudieron generar las preguntas automáticamente."
+      );
+    } finally {
+      const vacancyId = generationProposal.vacancy.id;
+      setGeneratingQuestions(false);
+      setGenerationProposal(null);
+      navigate(`/vacancies/${vacancyId}/questions`);
+    }
+  }
+
+  function handleRejectGenerationProposal() {
+    const vacancyId = generationProposal?.vacancy?.id;
+    setGenerationProposal(null);
+
+    if (vacancyId) {
+      navigate(`/vacancies/${vacancyId}/questions`);
+    } else {
+      navigate("/dashboard");
+    }
+  }
+
+  // ── Submit del formulario ────────────────────────────────────────────────────
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -91,15 +148,15 @@ export default function VacancyFormPage() {
       return;
     }
 
+    const mandatoryRequirements = splitLinesToList(form.mandatory_requirements);
+
     const payload = {
       tenant_id: tenantId,
       code: form.code.trim() || `WEB-${Date.now()}`,
       title: form.title.trim(),
       description: form.description.trim(),
       responsibilities: splitLinesToList(form.responsibilities),
-      mandatory_requirements: splitLinesToList(
-        form.mandatory_requirements
-      ),
+      mandatory_requirements: mandatoryRequirements,
       desirable_requirements: splitLinesToList(
         form.desirable_requirements
       ),
@@ -125,9 +182,7 @@ export default function VacancyFormPage() {
       const createdVacancy = await createVacancy(payload);
 
       if (createdVacancy?.id) {
-        setSelection({
-          vacancyId: createdVacancy.id,
-        });
+        setSelection({ vacancyId: createdVacancy.id });
       }
 
       pushFlash(
@@ -135,6 +190,23 @@ export default function VacancyFormPage() {
         `Vacante creada correctamente: ${createdVacancy?.title || payload.title}.`
       );
 
+      // Ofrecemos generación automática solo si la vacante tiene entre 1 y 10
+      // requisitos obligatorios (límite del backend).
+      const canOfferAutoGeneration =
+        createdVacancy?.id &&
+        mandatoryRequirements.length >= 1 &&
+        mandatoryRequirements.length <= 10;
+
+      if (canOfferAutoGeneration) {
+        // Mostramos el modal; la navegación ocurre después de la elección del usuario.
+        setGenerationProposal({
+          vacancy: createdVacancy,
+          requirements: mandatoryRequirements,
+        });
+        return;
+      }
+
+      // Sin propuesta: navegamos directamente a preguntas.
       if (createdVacancy?.id) {
         navigate(`/vacancies/${createdVacancy.id}/questions`);
       } else {
@@ -151,6 +223,16 @@ export default function VacancyFormPage() {
 
   return (
     <>
+      {/* Modal de propuesta de generación automática con IA */}
+      {generationProposal ? (
+        <GenerateQuestionsProposalModal
+          vacancyTitle={generationProposal.vacancy?.title}
+          requirements={generationProposal.requirements}
+          loading={generatingQuestions}
+          onAccept={handleAcceptGenerationProposal}
+          onReject={handleRejectGenerationProposal}
+        />
+      ) : null}
       <section className="card">
         <div className="row-space">
           <div>
