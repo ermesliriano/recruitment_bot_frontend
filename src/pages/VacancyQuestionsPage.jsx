@@ -238,7 +238,20 @@ export default function VacancyQuestionsPage() {
       setErrors({});
       await loadQuestions();
     } catch (error) {
-      setErrors({ submit: error.message || "No se pudo crear la pregunta." });
+      // El backend devuelve 409 con detail.message para orden duplicado.
+      // extractErrorMessage en api.js ya desenvuelve detail.message correctamente.
+      const isOrderConflict =
+        error?.status === 409 ||
+        error?.body?.detail?.code === "DUPLICATED_ACTIVE_QUESTION_ORDER" ||
+        error?.body?.detail?.code === "QUESTION_ORDER_CONFLICT";
+
+      if (isOrderConflict) {
+        setErrors({
+          order: error.message || `El orden ${form.order} ya está en uso por otra pregunta activa.`,
+        });
+      } else {
+        setErrors({ submit: error.message || "No se pudo crear la pregunta." });
+      }
     } finally {
       setSubmitting(false);
     }
