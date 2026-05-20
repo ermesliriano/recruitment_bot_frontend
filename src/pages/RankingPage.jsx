@@ -111,7 +111,7 @@ export default function RankingPage() {
     },
     {
       key: "score_rules",
-      label: "Score reglas",
+      label: "Score preguntas",
       cell: (row) => formatScore(row.score_rules),
     },
     {

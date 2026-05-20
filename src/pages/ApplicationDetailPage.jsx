@@ -26,7 +26,7 @@ function buildSummaryItems(data, tenantId, applicationId) {
       value: data?.classification || data?.status,
     },
     {
-      label: "Score reglas",
+      label: "Score preguntas",
       value: data?.score_rules,
     },
     {
