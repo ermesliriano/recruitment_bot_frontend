@@ -44,6 +44,10 @@ export default function Topbar() {
                 Ranking
               </NavLink>
 
+              <NavLink className={getNavLinkClassName} to="/tenant-questions">
+                Preguntas genéricas
+              </NavLink>
+
               <NavLink className={getNavLinkClassName} to="/vacancies/new">
                 Nueva vacante
               </NavLink>

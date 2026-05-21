@@ -390,6 +390,64 @@ export async function deleteVacancyQuestion(vacancyId, vqId, options = {}) {
   );
 }
 
+// ── Tenant screening questions (genéricas por tenant) ──────────────────────────
+
+export function buildTenantQuestionPayload({ code, text, type, required, order }) {
+  const normalizedCode = String(code || "").trim();
+  const fallbackCode = normalizedCode || `tenant_q_${Date.now()}`;
+  const answerType = String(type || "text").trim().toLowerCase();
+
+  const validation =
+    answerType === "boolean"
+      ? { true_values: ["si", "sí", "s", "yes", "true"], false_values: ["no", "n", "false"] }
+      : answerType === "number"
+      ? { min: 0 }
+      : {};
+
+  return {
+    question_code: fallbackCode,
+    prompt_text: String(text || "").trim(),
+    answer_type: answerType,
+    default_validation: validation,
+    field_key: fallbackCode,
+    question_order:
+      Number.isFinite(Number(order)) && Number(order) > 0 ? Number(order) : 1,
+    prompt_override: null,
+    validation,
+    required: Boolean(required),
+    ask_before_cv: true,
+    include_in_cv_score: true,
+  };
+}
+
+export async function listTenantQuestions(tenantId, options = {}) {
+  return apiFetch(
+    `/tenants/${encodeURIComponent(String(tenantId).trim())}/screening-questions`,
+    { method: "GET", token: options.token }
+  );
+}
+
+export async function createTenantQuestion(tenantId, payload, options = {}) {
+  return apiFetch(
+    `/tenants/${encodeURIComponent(String(tenantId).trim())}/screening-questions`,
+    { method: "POST", body: payload, token: options.token }
+  );
+}
+
+export async function updateTenantQuestion(tenantId, tqId, payload, options = {}) {
+  return apiFetch(
+    `/tenants/${encodeURIComponent(String(tenantId).trim())}/screening-questions/${encodeURIComponent(String(tqId).trim())}`,
+    { method: "PATCH", body: payload, token: options.token }
+  );
+}
+
+export async function deleteTenantQuestion(tenantId, tqId, options = {}) {
+  return apiFetch(
+    `/tenants/${encodeURIComponent(String(tenantId).trim())}/screening-questions/${encodeURIComponent(String(tqId).trim())}`,
+    { method: "DELETE", token: options.token }
+  );
+}
+
 /**
  * Llama al endpoint que genera preguntas de screening automáticamente
  * a partir de los requisitos obligatorios de la vacante usando el LLM.

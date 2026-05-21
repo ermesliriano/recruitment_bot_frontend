@@ -9,6 +9,7 @@ import RankingPage from "./pages/RankingPage";
 import SignupPage from "./pages/SignupPage";
 import VacancyEditPage from "./pages/VacancyEditPage";
 import VacancyFormPage from "./pages/VacancyFormPage";
+import TenantQuestionsPage from "./pages/TenantQuestionsPage";
 import VacancyQuestionsPage from "./pages/VacancyQuestionsPage";
 
 function HomeRedirect() {
@@ -44,6 +45,7 @@ export default function App() {
                 path="/vacancies/:vacancyId/questions"
                 element={<VacancyQuestionsPage />}
               />
+              <Route path="/tenant-questions" element={<TenantQuestionsPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundRedirect />} />

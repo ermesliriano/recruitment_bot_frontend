@@ -255,13 +255,22 @@ export default function DashboardPage() {
               Listado de vacantes del tenant con acceso directo al ranking, preguntas y configuración.
             </p>
           </div>
-          <button
-            className="btn primary"
-            type="button"
-            onClick={() => navigate("/vacancies/new")}
-          >
-            Crear vacante
-          </button>
+          <div className="row">
+            <button
+              className="btn primary"
+              type="button"
+              onClick={() => navigate("/vacancies/new")}
+            >
+              Crear vacante
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate("/tenant-questions")}
+            >
+              Preguntas genéricas
+            </button>
+          </div>
         </div>
 
         <Table
