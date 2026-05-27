@@ -392,7 +392,7 @@ export async function deleteVacancyQuestion(vacancyId, vqId, options = {}) {
 
 // ── Tenant screening questions (genéricas por tenant) ──────────────────────────
 
-export function buildTenantQuestionPayload({ code, text, type, required, order }) {
+export function buildTenantQuestionPayload({ code, text, type, required, order, display_condition = {} }) {
   const normalizedCode = String(code || "").trim();
   const fallbackCode = normalizedCode || `tenant_q_${Date.now()}`;
   const answerType = String(type || "text").trim().toLowerCase();
@@ -414,6 +414,7 @@ export function buildTenantQuestionPayload({ code, text, type, required, order }
       Number.isFinite(Number(order)) && Number(order) > 0 ? Number(order) : 1,
     prompt_override: null,
     validation,
+    display_condition: display_condition && Object.keys(display_condition).length > 0 ? display_condition : {},
     required: Boolean(required),
     ask_before_cv: true,
     include_in_cv_score: true,

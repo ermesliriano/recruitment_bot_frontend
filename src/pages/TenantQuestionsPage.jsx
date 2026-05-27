@@ -11,8 +11,19 @@ import {
   updateTenantQuestion,
 } from "../lib/api";
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+
 function emptyForm(nextOrder = 1) {
-  return { code: "", text: "", type: "text", order: String(nextOrder), required: true };
+  return {
+    code: "",
+    text: "",
+    type: "text",
+    order: String(nextOrder),
+    required: true,
+    conditionEnabled: false,
+    conditionFieldKey: "",
+    conditionValue: "true", // "true" | "false"
+  };
 }
 
 function getNextAvailableOrder(items = []) {
@@ -25,6 +36,112 @@ function getNextAvailableOrder(items = []) {
   while (used.has(next)) next += 1;
   return next;
 }
+
+/** Extrae la lista de preguntas booleanas con orden inferior al orden dado. */
+function booleanPriorTo(questions, currentOrder, excludeTqId = null) {
+  return questions.filter(
+    (q) =>
+      q.answer_type === "boolean" &&
+      Number(q.question_order) < Number(currentOrder) &&
+      q.tq_id !== excludeTqId
+  );
+}
+
+/** Convierte los campos de condición del formulario a un objeto display_condition. */
+function buildCondition(conditionEnabled, conditionFieldKey, conditionValue) {
+  if (!conditionEnabled || !conditionFieldKey) return {};
+  return {
+    depends_on_field_key: conditionFieldKey,
+    operator: "equals",
+    value: conditionValue === "true",
+  };
+}
+
+/** Convierte un display_condition existente a campos del formulario. */
+function parseCondition(display_condition) {
+  if (!display_condition || !display_condition.depends_on_field_key) {
+    return { conditionEnabled: false, conditionFieldKey: "", conditionValue: "true" };
+  }
+  return {
+    conditionEnabled: true,
+    conditionFieldKey: display_condition.depends_on_field_key,
+    conditionValue: display_condition.value === false ? "false" : "true",
+  };
+}
+
+const TYPE_LABEL = { text: "Texto libre", number: "Número", boolean: "Sí / No" };
+
+// ─── componente de condición reutilizable ────────────────────────────────────
+
+function ConditionSection({ conditionEnabled, conditionFieldKey, conditionValue, booleanOptions, onChange }) {
+  function toggle() {
+    onChange({ conditionEnabled: !conditionEnabled, conditionFieldKey: "", conditionValue: "true" });
+  }
+
+  return (
+    <div className="condition-section">
+      <label className="checkbox-row">
+        <input type="checkbox" checked={conditionEnabled} onChange={toggle} />
+        <span>Depende de una pregunta booleana anterior</span>
+      </label>
+
+      {conditionEnabled && (
+        <div className="condition-body">
+          {booleanOptions.length === 0 ? (
+            <p className="muted" style={{ marginTop: 8 }}>
+              No hay preguntas de tipo Sí/No con orden inferior a esta. Añade primero una pregunta
+              booleana anterior para poder crear una condición.
+            </p>
+          ) : (
+            <>
+              <label className="label" style={{ marginTop: 8 }}>
+                Campo de referencia
+                <select
+                  className="input"
+                  value={conditionFieldKey}
+                  onChange={(e) => onChange({ conditionFieldKey: e.target.value })}
+                >
+                  <option value="">— selecciona —</option>
+                  {booleanOptions.map((q) => (
+                    <option key={q.tq_id} value={q.field_key}>
+                      #{q.question_order} — {q.field_key} ({q.prompt_text.slice(0, 50)}{q.prompt_text.length > 50 ? "…" : ""})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <fieldset className="radio-group" style={{ marginTop: 8 }}>
+                <legend className="label" style={{ marginBottom: 4 }}>Mostrar si responde</legend>
+                <label className="radio-row">
+                  <input
+                    type="radio"
+                    name="conditionValue"
+                    value="true"
+                    checked={conditionValue === "true"}
+                    onChange={() => onChange({ conditionValue: "true" })}
+                  />
+                  <span>Sí</span>
+                </label>
+                <label className="radio-row">
+                  <input
+                    type="radio"
+                    name="conditionValue"
+                    value="false"
+                    checked={conditionValue === "false"}
+                    onChange={() => onChange({ conditionValue: "false" })}
+                  />
+                  <span>No</span>
+                </label>
+              </fieldset>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── página principal ────────────────────────────────────────────────────────
 
 export default function TenantQuestionsPage() {
   const { tenantId, pushFlash } = useAppContext();
@@ -39,6 +156,8 @@ export default function TenantQuestionsPage() {
   const [editing, setEditing] = useState(null);
   const [updating, setUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+
+  // ── carga ──────────────────────────────────────────────────────────────────
 
   const loadQuestions = useCallback(async () => {
     if (!tenantId) {
@@ -66,31 +185,66 @@ export default function TenantQuestionsPage() {
     loadQuestions();
   }, [loadQuestions]);
 
+  // ── payload de creación ────────────────────────────────────────────────────
+
   const payload = useMemo(
-    () => buildTenantQuestionPayload({ code: form.code, text: form.text, type: form.type, required: form.required, order: form.order }),
+    () =>
+      buildTenantQuestionPayload({
+        code: form.code,
+        text: form.text,
+        type: form.type,
+        required: form.required,
+        order: form.order,
+        display_condition: buildCondition(form.conditionEnabled, form.conditionFieldKey, form.conditionValue),
+      }),
     [form]
   );
+
+  // ── helpers de renderizado ─────────────────────────────────────────────────
 
   function renderError(name) {
     return errors[name] ? <div className="field-error">{errors[name]}</div> : null;
   }
+
+  function conditionBadge(display_condition) {
+    if (!display_condition || !display_condition.depends_on_field_key) return null;
+    const val = display_condition.value === false ? "No" : "Sí";
+    return (
+      <span className="badge badge-condition" title="Pregunta condicional">
+        si {display_condition.depends_on_field_key} = {val}
+      </span>
+    );
+  }
+
+  // ── creación ───────────────────────────────────────────────────────────────
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     setForm((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
   }
 
+  function handleConditionChange(patch) {
+    setForm((current) => ({ ...current, ...patch }));
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
     const nextErrors = {};
+
     if (!tenantId) nextErrors.submit = "Debes indicar un tenant antes de guardar.";
     if (!form.text.trim()) nextErrors.text = "El enunciado es obligatorio.";
+
     const order = Number(form.order);
     if (!Number.isInteger(order) || order < 1) {
       nextErrors.order = "El orden debe ser un entero mayor o igual que 1.";
     } else if (questions.some((item) => Number(item.question_order) === order)) {
       nextErrors.order = `Ya existe una pregunta con el orden ${order}.`;
     }
+
+    if (form.conditionEnabled && !form.conditionFieldKey) {
+      nextErrors.condition = "Selecciona el campo del que depende esta pregunta.";
+    }
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -108,12 +262,18 @@ export default function TenantQuestionsPage() {
     }
   }
 
+  // ── edición ────────────────────────────────────────────────────────────────
+
   function startEdit(item) {
+    const { conditionEnabled, conditionFieldKey, conditionValue } = parseCondition(item.display_condition);
     setEditing({
       tq_id: item.tq_id,
       prompt_override: item.prompt_text || "",
       question_order: String(item.question_order || 1),
       required: Boolean(item.required),
+      conditionEnabled,
+      conditionFieldKey,
+      conditionValue,
     });
     setErrors({});
   }
@@ -123,17 +283,37 @@ export default function TenantQuestionsPage() {
     setEditing((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
   }
 
+  function handleEditConditionChange(patch) {
+    setEditing((current) => ({ ...current, ...patch }));
+  }
+
   async function handleUpdate(e) {
     e.preventDefault();
     const nextErrors = {};
+
     const order = Number(editing.question_order);
     if (!Number.isInteger(order) || order < 1) {
       nextErrors.question_order = "El orden debe ser un entero mayor o igual que 1.";
-    } else if (questions.some((item) => item.tq_id !== editing.tq_id && Number(item.question_order) === order)) {
+    } else if (
+      questions.some(
+        (item) => item.tq_id !== editing.tq_id && Number(item.question_order) === order
+      )
+    ) {
       nextErrors.question_order = `Ya existe una pregunta con el orden ${order}.`;
     }
+
+    if (editing.conditionEnabled && !editing.conditionFieldKey) {
+      nextErrors.condition = "Selecciona el campo del que depende esta pregunta.";
+    }
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
+
+    const display_condition = buildCondition(
+      editing.conditionEnabled,
+      editing.conditionFieldKey,
+      editing.conditionValue
+    );
 
     try {
       setUpdating(true);
@@ -141,6 +321,7 @@ export default function TenantQuestionsPage() {
         prompt_override: String(editing.prompt_override || "").trim() || null,
         question_order: order,
         required: Boolean(editing.required),
+        display_condition,
       });
       pushFlash("message", "Pregunta genérica actualizada correctamente.");
       setEditing(null);
@@ -153,8 +334,12 @@ export default function TenantQuestionsPage() {
     }
   }
 
+  // ── eliminación ────────────────────────────────────────────────────────────
+
   async function handleDelete(item) {
-    const confirmed = window.confirm(`¿Seguro que quieres eliminar esta pregunta?\n\n"${item.prompt_text}"`);
+    const confirmed = window.confirm(
+      `¿Seguro que quieres eliminar esta pregunta?\n\n"${item.prompt_text}"`
+    );
     if (!confirmed) return;
     try {
       setDeletingId(item.tq_id);
@@ -169,16 +354,23 @@ export default function TenantQuestionsPage() {
     }
   }
 
-  const typeLabel = { text: "Texto libre", number: "Número", boolean: "Sí / No" };
+  // ── render ─────────────────────────────────────────────────────────────────
+
+  const createBooleanOptions = booleanPriorTo(questions, form.order);
+  const editBooleanOptions = editing
+    ? booleanPriorTo(questions, editing.question_order, editing.tq_id)
+    : [];
 
   return (
     <>
+      {/* Cabecera */}
       <section className="card">
         <div className="row-space">
           <div>
             <h1 className="h1">Preguntas genéricas del tenant</h1>
             <p className="muted">
               Se preguntan a todos los candidatos antes del CV e influyen en el CV Score del LLM.
+              Las preguntas condicionales solo se muestran si se cumple la condición indicada.
             </p>
           </div>
           <div className="row">
@@ -187,6 +379,7 @@ export default function TenantQuestionsPage() {
         </div>
       </section>
 
+      {/* Selector de tenant */}
       <VacancySelector
         title="Tenant"
         description="Selecciona el tenant al que pertenecen estas preguntas genéricas."
@@ -195,6 +388,7 @@ export default function TenantQuestionsPage() {
         autoLoad={false}
       />
 
+      {/* Listado */}
       <section className="card">
         <div className="row-space" style={{ marginBottom: 16 }}>
           <h2 className="h2">Preguntas configuradas</h2>
@@ -216,9 +410,12 @@ export default function TenantQuestionsPage() {
                 <span className="question-row-info">
                   <span className="question-row-title">
                     {item.question_order}. {item.prompt_text}
+                    {conditionBadge(item.display_condition)}
                   </span>
                   <span className="question-row-meta">
-                    {typeLabel[item.answer_type] ?? item.answer_type} · campo: {item.field_key}
+                    {TYPE_LABEL[item.answer_type] ?? item.answer_type}
+                    {" · campo: "}
+                    {item.field_key}
                     {!item.required ? " · opcional" : ""}
                   </span>
                 </span>
@@ -239,10 +436,12 @@ export default function TenantQuestionsPage() {
         )}
       </section>
 
+      {/* Formulario de edición */}
       {editing ? (
         <section className="card">
           <h2 className="h2" style={{ marginBottom: 16 }}>Editar pregunta genérica</h2>
           {renderError("submit")}
+
           <form className="form" onSubmit={handleUpdate} noValidate>
             <label className="label">
               Enunciado mostrado al candidato
@@ -253,6 +452,7 @@ export default function TenantQuestionsPage() {
                 onChange={handleEditChange}
               />
             </label>
+
             <div className="form-grid grid-2">
               <label className="label">
                 Orden
@@ -267,10 +467,26 @@ export default function TenantQuestionsPage() {
                 {renderError("question_order")}
               </label>
               <label className="checkbox-row" style={{ alignSelf: "end" }}>
-                <input type="checkbox" name="required" checked={editing.required} onChange={handleEditChange} />
+                <input
+                  type="checkbox"
+                  name="required"
+                  checked={editing.required}
+                  onChange={handleEditChange}
+                />
                 <span>Pregunta obligatoria</span>
               </label>
             </div>
+
+            {/* Condición de visualización */}
+            <ConditionSection
+              conditionEnabled={editing.conditionEnabled}
+              conditionFieldKey={editing.conditionFieldKey}
+              conditionValue={editing.conditionValue}
+              booleanOptions={editBooleanOptions}
+              onChange={handleEditConditionChange}
+            />
+            {renderError("condition")}
+
             <div className="form-actions">
               <button className="btn primary" type="submit" disabled={updating}>
                 {updating ? "Guardando…" : "Guardar cambios"}
@@ -283,9 +499,11 @@ export default function TenantQuestionsPage() {
         </section>
       ) : null}
 
+      {/* Formulario de creación */}
       <section className="card">
         <h2 className="h2" style={{ marginBottom: 16 }}>Añadir pregunta genérica</h2>
         {renderError("submit")}
+
         <form className="form" onSubmit={handleCreate} noValidate>
           <div className="form-grid grid-2">
             <label className="label">
@@ -307,6 +525,7 @@ export default function TenantQuestionsPage() {
               </select>
             </label>
           </div>
+
           <label className="label">
             Enunciado (texto que verá el candidato en el bot)
             <textarea
@@ -318,6 +537,7 @@ export default function TenantQuestionsPage() {
             />
           </label>
           {renderError("text")}
+
           <div className="form-grid grid-2">
             <label className="label">
               Orden
@@ -332,12 +552,32 @@ export default function TenantQuestionsPage() {
               {renderError("order")}
             </label>
             <label className="checkbox-row" style={{ alignSelf: "end" }}>
-              <input type="checkbox" name="required" checked={form.required} onChange={handleChange} />
+              <input
+                type="checkbox"
+                name="required"
+                checked={form.required}
+                onChange={handleChange}
+              />
               <span>Pregunta obligatoria</span>
             </label>
           </div>
+
+          {/* Condición de visualización */}
+          <ConditionSection
+            conditionEnabled={form.conditionEnabled}
+            conditionFieldKey={form.conditionFieldKey}
+            conditionValue={form.conditionValue}
+            booleanOptions={createBooleanOptions}
+            onChange={handleConditionChange}
+          />
+          {renderError("condition")}
+
           <div className="form-actions">
-            <button className="btn primary" type="submit" disabled={submitting || !tenantId}>
+            <button
+              className="btn primary"
+              type="submit"
+              disabled={submitting || !tenantId}
+            >
               {submitting ? "Guardando…" : "Añadir pregunta"}
             </button>
           </div>
