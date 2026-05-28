@@ -3,13 +3,14 @@ import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
+import CvImportsPage from "./pages/CvImportsPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import RankingPage from "./pages/RankingPage";
 import SignupPage from "./pages/SignupPage";
+import TenantQuestionsPage from "./pages/TenantQuestionsPage";
 import VacancyEditPage from "./pages/VacancyEditPage";
 import VacancyFormPage from "./pages/VacancyFormPage";
-import TenantQuestionsPage from "./pages/TenantQuestionsPage";
 import VacancyQuestionsPage from "./pages/VacancyQuestionsPage";
 
 function HomeRedirect() {
@@ -35,16 +36,11 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/ranking" element={<RankingPage />} />
-              <Route
-                path="/applications/:applicationId"
-                element={<ApplicationDetailPage />}
-              />
+              <Route path="/cv-imports" element={<CvImportsPage />} />
+              <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
               <Route path="/vacancies/new" element={<VacancyFormPage />} />
               <Route path="/vacancies/:vacancyId/edit" element={<VacancyEditPage />} />
-              <Route
-                path="/vacancies/:vacancyId/questions"
-                element={<VacancyQuestionsPage />}
-              />
+              <Route path="/vacancies/:vacancyId/questions" element={<VacancyQuestionsPage />} />
               <Route path="/tenant-questions" element={<TenantQuestionsPage />} />
             </Route>
 

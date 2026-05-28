@@ -778,3 +778,71 @@ select.input:focus {
   color: #1d4ed8;
   border: 1px solid #bfdbfe;
 }
+
+/* ── CV Import / Outbound ─────────────────────────────────────────────────── */
+
+.hidden-file-input {
+  display: none;
+}
+
+.upload-dropzone {
+  margin-top: 18px;
+  padding: 22px;
+  border: 2px dashed #bfdbfe;
+  border-radius: 16px;
+  background: #f8fbff;
+  color: #1d4ed8;
+  text-align: center;
+  font-weight: 700;
+}
+
+.upload-dropzone.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.upload-file-list {
+  margin: 16px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.outbound-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.outbound-badge.waiting_reply,
+.outbound-badge.template_sent {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.outbound-badge.scoring_completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.outbound-badge.blocked_no_opt_in,
+.outbound-badge.phone_not_found,
+.outbound-badge.ambiguous_phone {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.outbound-badge.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.outbound-badge.completed,
+.outbound-badge.neutral {
+  background: #f3f4f6;
+  color: #475467;
+}

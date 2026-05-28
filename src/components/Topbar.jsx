@@ -6,14 +6,7 @@ function getNavLinkClassName({ isActive }) {
 }
 
 export default function Topbar() {
-  const {
-    authState,
-    currentUserLabel,
-    isAuthenticated,
-    logout,
-    pushFlash,
-  } = useAppContext();
-
+  const { authState, currentUserLabel, isAuthenticated, logout, pushFlash } = useAppContext();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -32,16 +25,16 @@ export default function Topbar() {
         <nav className="nav">
           {isAuthenticated ? (
             <>
-              <NavLink
-                end
-                className={getNavLinkClassName}
-                to="/dashboard"
-              >
+              <NavLink end className={getNavLinkClassName} to="/dashboard">
                 Dashboard
               </NavLink>
 
               <NavLink className={getNavLinkClassName} to="/ranking">
                 Ranking
+              </NavLink>
+
+              <NavLink className={getNavLinkClassName} to="/cv-imports">
+                Cargar CVs
               </NavLink>
 
               <NavLink className={getNavLinkClassName} to="/tenant-questions">

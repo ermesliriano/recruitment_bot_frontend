@@ -235,6 +235,14 @@ export default function DashboardPage() {
         />
 
         <StatCard
+          title="Carga manual de CVs"
+          value="Seeder"
+          description="Sube uno o varios CVs y dispara el flujo outbound por WhatsApp."
+          actionLabel="Ir a carga"
+          onAction={() => navigate("/cv-imports")}
+        />
+
+        <StatCard
           title="Sesión"
           value={authState.isEnvToken ? "Token .env" : "Token local"}
           description={`Operador actual: ${currentUserLabel}`}

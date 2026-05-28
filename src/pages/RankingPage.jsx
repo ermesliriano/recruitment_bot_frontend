@@ -97,18 +97,13 @@ export default function RankingPage() {
   }
 
   const columns = [
-    {
-      key: "nombre",
-      label: "Nombre",
-    },
-    {
-      key: "telefono",
-      label: "Teléfono",
-    },
-    {
-      key: "vacante",
-      label: "Vacante",
-    },
+    { key: "application_id", label: "Application ID" },
+    { key: "nombre", label: "Nombre" },
+    { key: "telefono", label: "Teléfono" },
+    { key: "vacante", label: "Vacante" },
+    { key: "origin", label: "Origen" },
+    { key: "channel", label: "Canal" },
+    { key: "outbound_status", label: "Outbound" },
     {
       key: "score_rules",
       label: "Score preguntas",
@@ -124,10 +119,7 @@ export default function RankingPage() {
       label: "Score total",
       cell: (row) => formatScore(row.score_total),
     },
-    {
-      key: "estado",
-      label: "Estado",
-    },
+    { key: "estado", label: "Estado" },
   ];
 
   return (

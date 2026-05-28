@@ -123,8 +123,11 @@ export async function apiFetch(
     finalHeaders.set("Authorization", `Bearer ${effectiveToken}`);
   }
 
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+
   const hasBody = body !== undefined && body !== null;
-  if (hasBody && !finalHeaders.has("Content-Type")) {
+  if (hasBody && !isFormData && !finalHeaders.has("Content-Type")) {
     finalHeaders.set("Content-Type", "application/json");
   }
 
@@ -134,7 +137,7 @@ export async function apiFetch(
     response = await fetch(buildUrl(path, query), {
       method,
       headers: finalHeaders,
-      body: hasBody ? JSON.stringify(body) : undefined,
+      body: hasBody ? (isFormData ? body : JSON.stringify(body)) : undefined,
     });
   } catch (networkError) {
     throw new ApiError(
@@ -513,4 +516,50 @@ export async function probeAdminToken({
         "Sesión guardada. No se pudo completar la verificación previa, pero el backend seguirá validando el token en cada operación protegida.",
     };
   }
+}
+
+export async function createCvImportJob(tenantId, vacancyId, files, options = {}) {
+  const formData = new FormData();
+  formData.append("vacancy_id", vacancyId);
+  files.forEach((file) => formData.append("files", file));
+
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports`,
+    {
+      method: "POST",
+      body: formData,
+      token: options.token,
+    }
+  );
+}
+
+export async function getCvImportJob(tenantId, jobId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports/${encodeURIComponent(String(jobId).trim())}`,
+    {
+      method: "GET",
+      token: options.token,
+    }
+  );
+}
+
+export async function listCvImportJobs(tenantId, vacancyId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports`,
+    {
+      method: "GET",
+      query: { vacancy_id: vacancyId },
+      token: options.token,
+    }
+  );
+}
+
+export async function retryOutboundMessage(tenantId, jobId, itemId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports/${encodeURIComponent(String(jobId).trim())}/items/${encodeURIComponent(String(itemId).trim())}/retry-outbound`,
+    {
+      method: "POST",
+      token: options.token,
+    }
+  );
 }
