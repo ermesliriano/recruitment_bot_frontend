@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Table from "../components/Table";
 import VacancySelector from "../components/VacancySelector";
@@ -25,16 +25,20 @@ export default function RankingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [applicationId, setApplicationId] = useState("");
+  const requestIdRef = useRef(0);
 
+  // URL -> contexto. Depende SOLO de searchParams (no de vacancyId): si dependiera
+  // de vacancyId, al cambiar la vacante desde el dropdown este efecto leería una URL
+  // todavía sin actualizar y revertiría la selección, provocando un ping-pong con el
+  // efecto inverso (la causa del parpadeo entre el ranking nuevo y el anterior).
   useEffect(() => {
     const queryVacancyId = String(searchParams.get("vacancyId") || "").trim();
 
     if (queryVacancyId && queryVacancyId !== vacancyId) {
-      setSelection({
-        vacancyId: queryVacancyId,
-      });
+      setSelection({ vacancyId: queryVacancyId });
     }
-  }, [searchParams, vacancyId, setSelection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSelection]);
 
   useEffect(() => {
     if (!vacancyId) {
@@ -54,13 +58,20 @@ export default function RankingPage() {
     setSearchParams(nextParams, { replace: true });
   }, [searchParams, setSearchParams, vacancyId]);
 
-  async function loadRanking() {
+  const loadRanking = useCallback(async () => {
     if (!tenantId || !vacancyId) {
       setRows([]);
       setTotal(0);
       setError("");
+      setLoading(false);
       return;
     }
+
+    // Solo la última petición puede actualizar el estado: descartamos respuestas
+    // obsoletas (p. ej. la del ranking anterior que llega tarde por el arranque en
+    // frío de Render), que es lo que hacía parpadear dos rankings a la vez.
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
 
     try {
       setLoading(true);
@@ -68,22 +79,31 @@ export default function RankingPage() {
 
       const data = await getRanking(tenantId, vacancyId);
 
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       setRows(Array.isArray(data?.items) ? data.items : []);
       setTotal(
         data?.total ?? (Array.isArray(data?.items) ? data.items.length : 0)
       );
     } catch (loadError) {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
       setRows([]);
       setTotal(0);
       setError(loadError.message || "No se pudo cargar el ranking.");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  }
+  }, [tenantId, vacancyId]);
 
   useEffect(() => {
     loadRanking();
-  }, [tenantId, vacancyId]);
+  }, [loadRanking]);
 
   function handleOpenApplication(event) {
     event.preventDefault();
