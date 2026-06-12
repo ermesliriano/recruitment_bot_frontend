@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import {
   clearAuthState,
   getInitialAuthState,
@@ -59,7 +59,7 @@ export function AppProvider({ children }) {
   );
   const [flashes, setFlashes] = useState([]);
 
-  function pushFlash(type, text) {
+  const pushFlash = useCallback((type, text) => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     setFlashes((current) => [...current, { id, type, text }]);
@@ -69,13 +69,13 @@ export function AppProvider({ children }) {
     }, 6000);
 
     return id;
-  }
+  }, []);
 
-  function removeFlash(id) {
+  const removeFlash = useCallback((id) => {
     setFlashes((current) => current.filter((item) => item.id !== id));
-  }
+  }, []);
 
-  function setSelection(patch) {
+  const setSelection = useCallback((patch) => {
     setSelectionState((current) => {
       const nextSelection = {
         tenantId: Object.prototype.hasOwnProperty.call(patch, "tenantId")
@@ -89,40 +89,53 @@ export function AppProvider({ children }) {
       persistSelection(nextSelection);
       return nextSelection;
     });
-  }
+  }, []);
 
-  function login({ email, token, remember }) {
+  const login = useCallback(({ email, token, remember }) => {
     const nextAuthState = persistAuthState({ email, token, remember });
     setAuthState(nextAuthState);
     return nextAuthState;
-  }
+  }, []);
 
-  function signup({ email, token, remember }) {
+  const signup = useCallback(({ email, token, remember }) => {
     const nextAuthState = persistAuthState({ email, token, remember });
     setAuthState(nextAuthState);
     return nextAuthState;
-  }
+  }, []);
 
-  function logout() {
+  const logout = useCallback(() => {
     const nextAuthState = clearAuthState();
     setAuthState(nextAuthState);
     return nextAuthState;
-  }
+  }, []);
 
-  const value = {
-    authState,
-    currentUserLabel: authState.email || "Operador local",
-    isAuthenticated: Boolean(authState.token),
-    login,
-    signup,
-    logout,
-    flashes,
-    pushFlash,
-    removeFlash,
-    tenantId: selectionState.tenantId,
-    vacancyId: selectionState.vacancyId,
-    setSelection,
-  };
+  const value = useMemo(
+    () => ({
+      authState,
+      currentUserLabel: authState.email || "Operador local",
+      isAuthenticated: Boolean(authState.token),
+      login,
+      signup,
+      logout,
+      flashes,
+      pushFlash,
+      removeFlash,
+      tenantId: selectionState.tenantId,
+      vacancyId: selectionState.vacancyId,
+      setSelection,
+    }),
+    [
+      authState,
+      flashes,
+      selectionState,
+      login,
+      signup,
+      logout,
+      pushFlash,
+      removeFlash,
+      setSelection,
+    ]
+  );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

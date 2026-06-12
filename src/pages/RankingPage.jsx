@@ -24,7 +24,6 @@ export default function RankingPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [applicationId, setApplicationId] = useState("");
   const requestIdRef = useRef(0);
 
   // URL -> contexto. Depende SOLO de searchParams (no de vacancyId): si dependiera
@@ -105,19 +104,29 @@ export default function RankingPage() {
     loadRanking();
   }, [loadRanking]);
 
-  function handleOpenApplication(event) {
-    event.preventDefault();
-
-    const normalizedApplicationId = String(applicationId || "").trim();
-    if (!normalizedApplicationId) {
-      return;
-    }
-
-    navigate(`/applications/${normalizedApplicationId}`);
-  }
-
   const columns = [
-    { key: "application_id", label: "Application ID" },
+    {
+      key: "application_id",
+      label: "Application ID",
+      cell: (row) => (
+        <button
+          type="button"
+          onClick={() => navigate(`/applications/${row.application_id}`)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            color: "#2563eb",
+            cursor: "pointer",
+            textDecoration: "underline",
+            font: "inherit",
+            textAlign: "left",
+          }}
+        >
+          {row.application_id}
+        </button>
+      ),
+    },
     { key: "nombre", label: "Nombre" },
     { key: "telefono", label: "Teléfono" },
     { key: "vacante", label: "Vacante" },
@@ -147,7 +156,7 @@ export default function RankingPage() {
       <section className="card">
         <h1 className="h1">Ranking de candidaturas</h1>
         <p className="muted">
-          Consulta el ranking de candidaturas ordenadas por puntuación. Accede al detalle individual de cada aplicación introduciendosu identificador.
+          Consulta el ranking de candidaturas ordenadas por puntuación. Haz clic en el Application ID para ver el detalle individual de cada candidatura.
         </p>
       </section>
 
@@ -177,24 +186,6 @@ export default function RankingPage() {
             Recargar ranking
           </button>
         </div>
-
-        {/* Acceso directo al detalle de una candidatura por identificador */}
-
-        <form className="inline-form" onSubmit={handleOpenApplication}>
-          <label className="label">
-            Consultar candidatura por ID
-            <input
-              className="input"
-              value={applicationId}
-              onChange={(event) => setApplicationId(event.target.value)}
-              placeholder="Introduce el ID de la candidatura"
-            />
-          </label>
-
-          <button className="btn" type="submit">
-            Ver detalle
-          </button>
-        </form>
 
         <Table
           columns={columns}

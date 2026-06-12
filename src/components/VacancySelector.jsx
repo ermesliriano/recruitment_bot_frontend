@@ -65,35 +65,7 @@ export default function VacancySelector({
     [vacancies, vacancyId]
   );
 
-  function handleTenantChange(event) {
-    const nextTenantId = event.target.value;
-
-    setError("");
-    setVacancies([]);
-
-    if (onLoaded) {
-      onLoaded([]);
-    }
-
-    if (showVacancyField) {
-      setSelection({
-        tenantId: nextTenantId,
-        vacancyId: "",
-      });
-    } else {
-      setSelection({
-        tenantId: nextTenantId,
-      });
-    }
-  }
-
   function handleVacancySelect(event) {
-    setSelection({
-      vacancyId: event.target.value,
-    });
-  }
-
-  function handleManualVacancyChange(event) {
     setSelection({
       vacancyId: event.target.value,
     });
@@ -119,56 +91,30 @@ export default function VacancySelector({
         ) : null}
       </div>
 
-      <div
-        className={`selector-grid ${
-          showVacancyField ? "" : "selector-grid--single"
-        }`}
-      >
-        <label className="label">
-          Tenant ID
-          <input
-            className="input"
-            value={tenantId}
-            onChange={handleTenantChange}
-            placeholder="11111111-1111-1111-1111-111111111111"
-          />
-        </label>
+      {showVacancyField ? (
+        <div className="selector-grid selector-grid--single">
+          <label className="label">
+            Vacante
+            <select
+              className="input"
+              value={currentVacancyInList ? currentVacancyInList.id : vacancyId}
+              onChange={handleVacancySelect}
+            >
+              <option value="">Selecciona una vacante</option>
 
-        {showVacancyField ? (
-          <>
-            <label className="label">
-              Vacante
-              <select
-                className="input"
-                value={currentVacancyInList ? currentVacancyInList.id : vacancyId}
-                onChange={handleVacancySelect}
-              >
-                <option value="">Selecciona una vacante</option>
+              {vacancies.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title || item.code || item.id}
+                </option>
+              ))}
 
-                {vacancies.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title || item.code || item.id}
-                  </option>
-                ))}
-
-                {vacancyId && !currentVacancyInList ? (
-                  <option value={vacancyId}>Vacante manual actual</option>
-                ) : null}
-              </select>
-            </label>
-
-            <label className="label">
-              Vacante ID manual
-              <input
-                className="input"
-                value={vacancyId}
-                onChange={handleManualVacancyChange}
-                placeholder="22222222-2222-2222-2222-222222222222"
-              />
-            </label>
-          </>
-        ) : null}
-      </div>
+              {vacancyId && !currentVacancyInList ? (
+                <option value={vacancyId}>Vacante seleccionada</option>
+              ) : null}
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       {currentVacancyInList ? (
         <p className="help-text">
