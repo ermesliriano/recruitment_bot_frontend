@@ -1,16 +1,53 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CvImportResultsTable from "../components/CvImportResultsTable";
 import CvUploadPanel from "../components/CvUploadPanel";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
-import { createCvImportJob, retryOutboundMessage } from "../lib/api";
+import { createCvImportJob, listCvImportJobs, retryOutboundMessage } from "../lib/api";
+
+function flattenJobsToRows(jobs) {
+  const list = Array.isArray(jobs) ? jobs : [];
+
+  // El backend devuelve los jobs ordenados por created_at descendente
+  // (la ronda más reciente primero) con sus items embebidos. Aplanamos
+  // todos los items conservando ese orden y anotamos el job de origen
+  // para poder reintentar el outbound del ítem correcto.
+  return list.flatMap((job) =>
+    (Array.isArray(job?.items) ? job.items : []).map((item) => ({
+      ...item,
+      _jobId: job.id,
+    }))
+  );
+}
 
 export default function CvImportsPage() {
   const { tenantId, vacancyId, pushFlash } = useAppContext();
 
   const [files, setFiles] = useState([]);
-  const [job, setJob] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [loadingRows, setLoadingRows] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const loadRows = useCallback(async () => {
+    if (!tenantId || !vacancyId) {
+      setRows([]);
+      return;
+    }
+
+    try {
+      setLoadingRows(true);
+      const jobs = await listCvImportJobs(tenantId, vacancyId);
+      setRows(flattenJobsToRows(jobs));
+    } catch (error) {
+      pushFlash("error", error.message || "No se pudieron cargar las importaciones de la vacante.");
+    } finally {
+      setLoadingRows(false);
+    }
+  }, [tenantId, vacancyId, pushFlash]);
+
+  useEffect(() => {
+    loadRows();
+  }, [loadRows]);
 
   async function handleSubmit() {
     if (!tenantId || !vacancyId) {
@@ -25,8 +62,9 @@ export default function CvImportsPage() {
 
     try {
       setSubmitting(true);
-      const response = await createCvImportJob(tenantId, vacancyId, files);
-      setJob(response);
+      await createCvImportJob(tenantId, vacancyId, files);
+      setFiles([]);
+      await loadRows();
       pushFlash("message", "Importación procesada correctamente.");
     } catch (error) {
       pushFlash("error", error.message || "No se pudo procesar la importación.");
@@ -36,14 +74,15 @@ export default function CvImportsPage() {
   }
 
   async function handleRetry(row) {
-    if (!job?.id) return;
+    if (!row?._jobId) return;
 
     try {
-      const updatedItem = await retryOutboundMessage(tenantId, job.id, row.id);
-      setJob((current) => ({
-        ...current,
-        items: current.items.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-      }));
+      const updatedItem = await retryOutboundMessage(tenantId, row._jobId, row.id);
+      setRows((current) =>
+        current.map((item) =>
+          item.id === updatedItem.id ? { ...item, ...updatedItem, _jobId: row._jobId } : item
+        )
+      );
       pushFlash("message", "Outbound reintentado.");
     } catch (error) {
       pushFlash("error", error.message || "No se pudo reintentar el outbound.");
@@ -74,7 +113,7 @@ export default function CvImportsPage() {
         </div>
       </section>
 
-      <CvImportResultsTable job={job} onRetry={handleRetry} />
+      <CvImportResultsTable rows={rows} loading={loadingRows} onRetry={handleRetry} />
     </>
   );
 }
