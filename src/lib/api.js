@@ -563,3 +563,14 @@ export async function retryOutboundMessage(tenantId, jobId, itemId, options = {}
     }
   );
 }
+
+export async function resolveCvImportPhone(tenantId, jobId, itemId, phone, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports/${encodeURIComponent(String(jobId).trim())}/items/${encodeURIComponent(String(itemId).trim())}/resolve-phone`,
+    {
+      method: "POST",
+      body: { phone },
+      token: options.token,
+    }
+  );
+}

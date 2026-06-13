@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import CvImportResultsTable from "../components/CvImportResultsTable";
+import CvPendingPhoneTable from "../components/CvPendingPhoneTable";
 import CvUploadPanel from "../components/CvUploadPanel";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
-import { createCvImportJob, listCvImportJobs, retryOutboundMessage } from "../lib/api";
+import {
+  createCvImportJob,
+  listCvImportJobs,
+  resolveCvImportPhone,
+  retryOutboundMessage,
+} from "../lib/api";
+
+// Estados de un ítem cuyo teléfono no pudo determinarse automáticamente.
+// Estos casos se muestran en un listado aparte para resolverlos manualmente.
+const PENDING_PHONE_STATUSES = ["phone_not_found", "ambiguous_phone"];
 
 function flattenJobsToRows(jobs) {
   const list = Array.isArray(jobs) ? jobs : [];
@@ -11,7 +21,7 @@ function flattenJobsToRows(jobs) {
   // El backend devuelve los jobs ordenados por created_at descendente
   // (la ronda más reciente primero) con sus items embebidos. Aplanamos
   // todos los items conservando ese orden y anotamos el job de origen
-  // para poder reintentar el outbound del ítem correcto.
+  // para poder reintentar o reprocesar el ítem correcto.
   return list.flatMap((job) =>
     (Array.isArray(job?.items) ? job.items : []).map((item) => ({
       ...item,
@@ -27,6 +37,7 @@ export default function CvImportsPage() {
   const [rows, setRows] = useState([]);
   const [loadingRows, setLoadingRows] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resolvingId, setResolvingId] = useState(null);
 
   const loadRows = useCallback(async () => {
     if (!tenantId || !vacancyId) {
@@ -48,6 +59,21 @@ export default function CvImportsPage() {
   useEffect(() => {
     loadRows();
   }, [loadRows]);
+
+  const { processedRows, pendingRows } = useMemo(() => {
+    const processed = [];
+    const pending = [];
+
+    rows.forEach((row) => {
+      if (PENDING_PHONE_STATUSES.includes(row.status)) {
+        pending.push(row);
+      } else {
+        processed.push(row);
+      }
+    });
+
+    return { processedRows: processed, pendingRows: pending };
+  }, [rows]);
 
   async function handleSubmit() {
     if (!tenantId || !vacancyId) {
@@ -89,6 +115,23 @@ export default function CvImportsPage() {
     }
   }
 
+  async function handleResolvePhone(row, phone) {
+    if (!row?._jobId || !phone) return;
+
+    try {
+      setResolvingId(row.id);
+      await resolveCvImportPhone(tenantId, row._jobId, row.id, phone);
+      // Recargamos el histórico para que el ítem reprocesado salte del listado
+      // de pendientes a la tabla de CVs importados con su estado actualizado.
+      await loadRows();
+      pushFlash("message", "CV reprocesado con el teléfono indicado.");
+    } catch (error) {
+      pushFlash("error", error.message || "No se pudo reprocesar el CV con ese teléfono.");
+    } finally {
+      setResolvingId(null);
+    }
+  }
+
   return (
     <>
       <section className="card">
@@ -113,7 +156,9 @@ export default function CvImportsPage() {
         </div>
       </section>
 
-      <CvImportResultsTable rows={rows} loading={loadingRows} onRetry={handleRetry} />
+      <CvImportResultsTable rows={processedRows} loading={loadingRows} onRetry={handleRetry} />
+
+      <CvPendingPhoneTable rows={pendingRows} onResolve={handleResolvePhone} busyId={resolvingId} />
     </>
   );
 }
