@@ -106,8 +106,8 @@ export default function RankingPage() {
 
   const columns = [
     {
-      key: "application_id",
-      label: "Application ID",
+      key: "nombre",
+      label: "Nombre",
       cell: (row) => (
         <button
           type="button"
@@ -116,18 +116,17 @@ export default function RankingPage() {
             background: "none",
             border: "none",
             padding: 0,
-            color: "#2563eb",
+            color: "var(--primary-strong)",
             cursor: "pointer",
             textDecoration: "underline",
             font: "inherit",
             textAlign: "left",
           }}
         >
-          {row.application_id}
+          {row.nombre || "—"}
         </button>
       ),
     },
-    { key: "nombre", label: "Nombre" },
     { key: "telefono", label: "Teléfono" },
     { key: "vacante", label: "Vacante" },
     { key: "origin", label: "Origen" },
@@ -156,7 +155,7 @@ export default function RankingPage() {
       <section className="card">
         <h1 className="h1">Ranking de candidaturas</h1>
         <p className="muted">
-          Consulta el ranking de candidaturas ordenadas por puntuación. Haz clic en el Application ID para ver el detalle individual de cada candidatura.
+          Consulta el ranking de candidaturas ordenadas por puntuación. Haz clic en el nombre del candidato para ver el detalle individual de cada candidatura.
         </p>
       </section>
 

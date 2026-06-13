@@ -10,8 +10,6 @@ import { getVacancyBudget } from "../lib/scoringBudget";
 
 export default function DashboardPage() {
   const {
-    authState,
-    currentUserLabel,
     tenantId,
     vacancyId,
     setSelection,
@@ -66,6 +64,14 @@ export default function DashboardPage() {
   const selectedVacancy = useMemo(
     () => vacancies.find((item) => item.id === vacancyId) || null,
     [vacancies, vacancyId]
+  );
+
+  // Todas las vacantes cargadas pertenecen al tenant seleccionado, así que
+  // tomamos el nombre del tenant de la primera que lo traiga (lo expone el backend
+  // en VacancyOut.tenant_name); si aún no ha cargado, caemos al id como respaldo.
+  const tenantName = useMemo(
+    () => vacancies.find((item) => item.tenant_name)?.tenant_name || "",
+    [vacancies]
   );
 
   function handleUseVacancy(row) {
@@ -204,7 +210,7 @@ export default function DashboardPage() {
           value={vacancies.length}
           description={
             tenantId
-              ? `Tenant activo: ${tenantId}`
+              ? `Tenant activo: ${tenantName || tenantId}`
               : "Selecciona un tenant para visualizar sus vacantes."
           }
           actionLabel="Crear vacante"
@@ -217,7 +223,7 @@ export default function DashboardPage() {
           value={selectedVacancy?.title || (vacancyId ? vacancyId : "Sin seleccionar")}
           description={
             selectedVacancy
-              ? `ID: ${selectedVacancy.id}`
+              ? `Código: ${selectedVacancy.code}`
               : "Selecciona una vacante para activar el ranking y el detalle de candidaturas."
           }
           actionLabel={vacancyId ? "Abrir ranking" : "Selecciona vacante"}
@@ -236,17 +242,12 @@ export default function DashboardPage() {
 
         <StatCard
           title="Carga manual de CVs"
-          value="Seeder"
+          value="Importar CVs"
           description="Sube uno o varios CVs y dispara el flujo outbound por WhatsApp."
           actionLabel="Ir a carga"
           onAction={() => navigate("/cv-imports")}
         />
 
-        <StatCard
-          title="Sesión"
-          value={authState.isEnvToken ? "Token .env" : "Token local"}
-          description={`Operador actual: ${currentUserLabel}`}
-        />
       </section>
 
       {rankingError ? (
