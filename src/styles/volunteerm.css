@@ -1,11 +1,35 @@
 :root {
-  --bg: #f4f7fb;
-  --card: #ffffff;
-  --text: #172033;
-  --muted: #667085;
-  --line: #dbe3ee;
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
+  /* === CESAR IA BOT SUITE — Paleta de marca === */
+  --primary-dark: #1F222B;      /* Fondo oscuro principal (cromo: topbar/nav) */
+  --secondary-dark: #2B2F38;    /* Variación oscura */
+  --primary-gold: #E8B15A;      /* Dorado principal (acento de marca) */
+  --secondary-gold: #D89B3F;    /* Dorado intenso (hover / activo) */
+  --light-bg: #E9E9E9;          /* Gris claro del fondo */
+  --pure-white: #F8F8F8;        /* Blanco suave (tarjetas) */
+  --text-dark: #1D1F26;         /* Texto oscuro */
+  --text-light: #FFFFFF;        /* Texto claro */
+  --accent-gray: #8A8F98;       /* Gris de apoyo (bordes / cromo) */
+  --cesar-gradient: linear-gradient(
+    90deg,
+    #1F222B 0%,
+    #2B2F38 50%,
+    #1F222B 100%
+  );
+
+  /* === Tokens semánticos (mapeados sobre la marca) ===
+     Cambia SOLO estas líneas para virar el tema. Para un tema 100% oscuro,
+     pon --bg en var(--primary-dark), --card en var(--secondary-dark) y
+     --text en var(--text-light). */
+  --bg: var(--light-bg);
+  --card: var(--pure-white);
+  --text: var(--text-dark);
+  --muted: #667085;             /* texto secundario legible sobre claro */
+  --line: #d6d8dc;
+  --primary: var(--primary-gold);
+  --primary-strong: var(--secondary-gold);  /* sustituye al antiguo azul --primary-dark */
+  --on-primary: #1F222B;        /* texto sobre dorado: oscuro, por contraste */
+
+  /* Estados funcionales (se mantienen sus colores semánticos) */
   --danger: #dc2626;
   --warning-bg: #fffbeb;
   --warning-border: #fbbf24;
@@ -13,7 +37,7 @@
   --error-border: #fca5a5;
   --success-bg: #ecfdf3;
   --success-border: #86efac;
-  --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --shadow: 0 12px 28px rgba(31, 34, 43, 0.12);
 }
 
 * {
@@ -76,9 +100,9 @@ code {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--cesar-gradient);
+  border-bottom: 1px solid rgba(232, 177, 90, 0.18);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
 }
 
 .topbar-inner {
@@ -94,6 +118,7 @@ code {
   font-size: 1.125rem;
   font-weight: 800;
   letter-spacing: 0.01em;
+  color: var(--primary-gold);
 }
 
 .nav {
@@ -106,7 +131,7 @@ code {
 
 .nav-link {
   text-decoration: none;
-  color: var(--muted);
+  color: #c7cbd2;
   padding: 10px 12px;
   border-radius: 10px;
   transition:
@@ -115,13 +140,13 @@ code {
 }
 
 .nav-link:hover {
-  background: #eef2ff;
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-light);
 }
 
 .nav-link.active {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: rgba(232, 177, 90, 0.16);
+  color: var(--primary-gold);
 }
 
 .pill {
@@ -130,14 +155,14 @@ code {
   height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #1d4ed8;
+  background: var(--primary-gold);
+  color: var(--on-primary);
   font-size: 0.9rem;
   font-weight: 700;
 }
 
 .pill.secondary {
-  background: #f3f4f6;
+  background: #e4e6ea;
   color: #344054;
 }
 
@@ -153,7 +178,7 @@ code {
   background: var(--card);
   border-radius: 18px;
   padding: 24px;
-  border: 1px solid rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(31, 34, 43, 0.06);
   box-shadow: var(--shadow);
 }
 
@@ -226,8 +251,8 @@ code {
   min-height: 178px;
   padding: 18px;
   border-radius: 16px;
-  border: 1px solid #dbe4f0;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #dcdee2;
+  background: linear-gradient(180deg, var(--pure-white) 0%, #f1f1f1 100%);
   box-shadow: var(--shadow);
 }
 
@@ -258,8 +283,8 @@ code {
   min-height: 42px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid #d0d5dd;
-  background: #ffffff;
+  border: 1px solid #cfd2d8;
+  background: var(--pure-white);
   text-decoration: none;
   color: var(--text);
   font-weight: 700;
@@ -272,19 +297,19 @@ code {
 
 .btn:hover {
   transform: translateY(-1px);
-  border-color: #98a2b3;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  border-color: var(--accent-gray);
+  box-shadow: 0 8px 18px rgba(31, 34, 43, 0.10);
 }
 
 .btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #ffffff;
+  background: var(--primary-gold);
+  border-color: var(--primary-gold);
+  color: var(--on-primary);
 }
 
 .btn.primary:hover {
-  background: var(--primary-dark);
-  border-color: var(--primary-dark);
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
 }
 
 .btn.small {
@@ -319,10 +344,10 @@ code {
 .textarea,
 select.input {
   width: 100%;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #cfd2d8;
   border-radius: 12px;
   padding: 11px 13px;
-  background: #ffffff;
+  background: var(--text-light);
   color: var(--text);
   transition:
     border-color 0.18s ease,
@@ -333,8 +358,8 @@ select.input {
 .textarea:focus,
 select.input:focus {
   outline: none;
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  border-color: var(--primary-gold);
+  box-shadow: 0 0 0 4px rgba(232, 177, 90, 0.20);
 }
 
 .textarea {
@@ -364,6 +389,7 @@ select.input:focus {
 .checkbox-row input {
   width: 16px;
   height: 16px;
+  accent-color: var(--primary-gold);
 }
 
 .flash-area {
@@ -416,9 +442,9 @@ select.input:focus {
 }
 
 .notice {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background: rgba(232, 177, 90, 0.12);
+  border-color: rgba(232, 177, 90, 0.45);
+  color: var(--text-dark);
 }
 
 .warning-box {
@@ -474,7 +500,7 @@ select.input:focus {
 
 .table-wrap {
   overflow: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e0e2e6;
   border-radius: 16px;
 }
 
@@ -482,7 +508,7 @@ select.input:focus {
   width: 100%;
   min-width: 720px;
   border-collapse: collapse;
-  background: #ffffff;
+  background: var(--text-light);
 }
 
 .table thead th {
@@ -491,15 +517,15 @@ select.input:focus {
   white-space: nowrap;
   font-size: 0.92rem;
   color: #344054;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
+  background: #f2f2f3;
+  border-bottom: 1px solid #e0e2e6;
 }
 
 .table tbody td {
   padding: 14px 16px;
   vertical-align: top;
   word-break: break-word;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #eef0f2;
 }
 
 .table tbody tr:last-child td {
@@ -507,7 +533,7 @@ select.input:focus {
 }
 
 .table tbody tr:hover {
-  background: #fafcff;
+  background: #faf7f0;
 }
 
 .table-actions {
@@ -530,8 +556,8 @@ select.input:focus {
 }
 
 .detail-item {
-  background: #fcfdff;
-  border: 1px solid #e5e7eb;
+  background: #fcfcfb;
+  border: 1px solid #e0e2e6;
   border-radius: 14px;
   padding: 14px;
 }
@@ -555,8 +581,8 @@ select.input:focus {
   padding: 16px;
   border-radius: 14px;
   overflow: auto;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--primary-dark);
+  color: #e6e3da;
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 0.92rem;
@@ -590,7 +616,7 @@ select.input:focus {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(31, 34, 43, 0.55);
   backdrop-filter: blur(4px);
   z-index: 200;
   display: flex;
@@ -604,7 +630,7 @@ select.input:focus {
   border-radius: 18px;
   padding: 28px;
   width: min(480px, 100%);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
   display: grid;
   gap: 18px;
 }
@@ -660,7 +686,7 @@ select.input:focus {
   padding: 12px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fafcff;
+  background: #fbfaf7;
 }
 
 .question-row-info {
@@ -687,7 +713,7 @@ select.input:focus {
   flex-shrink: 0;
   font-weight: 800;
   font-size: 1rem;
-  color: var(--primary);
+  color: var(--primary-strong);
 }
 
 /* ── Danger button ────────────────────────────────────────── */
@@ -722,7 +748,7 @@ select.input:focus {
   padding: 14px 16px;
   border: 1px dashed var(--line);
   border-radius: 12px;
-  background: #f8faff;
+  background: #f7f5f0;
   margin-top: 4px;
 }
 
@@ -753,7 +779,7 @@ select.input:focus {
 }
 
 .radio-row input[type="radio"] {
-  accent-color: var(--primary);
+  accent-color: var(--primary-gold);
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -774,9 +800,9 @@ select.input:focus {
 }
 
 .badge-condition {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: rgba(232, 177, 90, 0.16);
+  color: var(--text-dark);
+  border: 1px solid rgba(232, 177, 90, 0.45);
 }
 
 /* ── CV Import / Outbound ─────────────────────────────────────────────────── */
@@ -788,10 +814,10 @@ select.input:focus {
 .upload-dropzone {
   margin-top: 18px;
   padding: 22px;
-  border: 2px dashed #bfdbfe;
+  border: 2px dashed rgba(232, 177, 90, 0.55);
   border-radius: 16px;
-  background: #f8fbff;
-  color: #1d4ed8;
+  background: rgba(232, 177, 90, 0.08);
+  color: var(--text-dark);
   text-align: center;
   font-weight: 700;
 }
