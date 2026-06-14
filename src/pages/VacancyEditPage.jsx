@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import VacancyBudgetModal from "../components/VacancyBudgetModal";
+import VacancyActivateModal from "../components/VacancyActivateModal";
 import {
   getVacancy,
   listVacancyQuestions,
+  setVacancyStatus,
   splitLinesToList,
   updateVacancy,
 } from "../lib/api";
@@ -50,6 +52,8 @@ export default function VacancyEditPage() {
   const [loadedVacancy, setLoadedVacancy] = useState(null);
   const [budgetModal, setBudgetModal] = useState(null);
   const [usedPoints, setUsedPoints] = useState(0);
+  const [activateModal, setActivateModal] = useState(null);
+  const [activatingVacancy, setActivatingVacancy] = useState(false);
 
   const [form, setForm] = useState({
     code: "",
@@ -208,12 +212,54 @@ export default function VacancyEditPage() {
       setSubmitting(true);
       await updateVacancy(vacancyId, payload);
       pushFlash("message", "Vacante actualizada correctamente.");
+
+      // Si la vacante está en borrador y, tras guardar, la suma de puntos
+      // (CV + preguntas) es exactamente 100, ofrecemos activarla.
+      const isDraft =
+        String(loadedVacancy?.status || "").toLowerCase() === "draft";
+
+      if (isDraft) {
+        const questions = await listVacancyQuestions(vacancyId);
+        const budget = getVacancyBudget({
+          vacancy: loadedVacancy,
+          questions,
+          cvMaxScore: Number(form.cv_max_score),
+        });
+
+        if (budget.isValid) {
+          setActivateModal({
+            cvMaxScore: budget.cvMaxScore,
+            questionsTotal: budget.questionsTotal,
+          });
+          return;
+        }
+      }
+
       navigate("/dashboard");
     } catch (err) {
       setErrors({ submit: err.message || "No se pudo actualizar la vacante." });
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleActivateVacancy() {
+    try {
+      setActivatingVacancy(true);
+      await setVacancyStatus(vacancyId, "active");
+      pushFlash("message", "Vacante activada correctamente.");
+      setActivateModal(null);
+      navigate("/dashboard");
+    } catch (err) {
+      pushFlash("error", err.message || "No se pudo activar la vacante.");
+    } finally {
+      setActivatingVacancy(false);
+    }
+  }
+
+  function handleActivateLater() {
+    setActivateModal(null);
+    navigate("/dashboard");
   }
 
   if (loading) {
@@ -249,6 +295,17 @@ export default function VacancyEditPage() {
         }}
       />
     ) : null}
+
+      {activateModal ? (
+        <VacancyActivateModal
+          vacancy={loadedVacancy}
+          cvMaxScore={activateModal.cvMaxScore}
+          questionsTotal={activateModal.questionsTotal}
+          activating={activatingVacancy}
+          onActivate={handleActivateVacancy}
+          onClose={handleActivateLater}
+        />
+      ) : null}
       
       <section className="card">
         <div className="row-space">

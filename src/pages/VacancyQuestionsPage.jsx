@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import VacancyBudgetModal from "../components/VacancyBudgetModal";
+import VacancyActivateModal from "../components/VacancyActivateModal";
 import {
   buildQuestionPayload,
   createVacancyQuestion,
   deleteVacancyQuestion,
   getVacancy,
   listVacancyQuestions,
+  setVacancyStatus,
   splitLinesToList,
   updateVacancyQuestion,
 } from "../lib/api";
@@ -93,6 +95,8 @@ export default function VacancyQuestionsPage() {
 
   const [vacancy, setVacancy] = useState(null);
   const [budgetModal, setBudgetModal] = useState(null);
+  const [activateModal, setActivateModal] = useState(null);
+  const [activatingVacancy, setActivatingVacancy] = useState(false);
 
   const [form, setForm] = useState(() => emptyForm(1));
   const [errors, setErrors] = useState({});
@@ -151,8 +155,11 @@ export default function VacancyQuestionsPage() {
           order: String(getNextAvailableOrder(normalizedQuestions)),
         };
       });
+
+      return normalizedQuestions;
     } catch {
       setExistingQuestions([]);
+      return [];
     } finally {
       setQuestionsLoading(false);
     }
@@ -211,6 +218,35 @@ export default function VacancyQuestionsPage() {
     return true;
   }
   
+  function maybeOfferActivation(questionsList) {
+    if (!vacancy || String(vacancy.status || "").toLowerCase() !== "draft") {
+      return;
+    }
+
+    const budget = getVacancyBudget({ vacancy, questions: questionsList });
+
+    if (budget.isValid) {
+      setActivateModal({
+        cvMaxScore: budget.cvMaxScore,
+        questionsTotal: budget.questionsTotal,
+      });
+    }
+  }
+
+  async function handleActivateVacancy() {
+    try {
+      setActivatingVacancy(true);
+      await setVacancyStatus(routeVacancyId, "active");
+      setVacancy((cur) => (cur ? { ...cur, status: "active" } : cur));
+      pushFlash("message", "Vacante activada correctamente.");
+      setActivateModal(null);
+    } catch (error) {
+      pushFlash("error", error.message || "No se pudo activar la vacante.");
+    } finally {
+      setActivatingVacancy(false);
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -236,7 +272,8 @@ export default function VacancyQuestionsPage() {
       pushFlash("message", "Pregunta creada correctamente.");
       setForm(emptyForm(Number(form.order || 1) + 1));
       setErrors({});
-      await loadQuestions();
+      const refreshed = await loadQuestions();
+      maybeOfferActivation(refreshed);
     } catch (error) {
       // El backend devuelve 409 con detail.message para orden duplicado.
       // extractErrorMessage en api.js ya desenvuelve detail.message correctamente.
@@ -359,7 +396,8 @@ export default function VacancyQuestionsPage() {
       pushFlash("message", "Pregunta actualizada correctamente.");
       setEditingQuestion(null);
       setErrors({});
-      await loadQuestions();
+      const refreshed = await loadQuestions();
+      maybeOfferActivation(refreshed);
     } catch (error) {
       setErrors({
         submit: error.message || "No se pudo actualizar la pregunta.",
@@ -379,6 +417,17 @@ export default function VacancyQuestionsPage() {
           questionsTotal={budgetModal.questionsTotal}
           onClose={() => setBudgetModal(null)}
           onGoToQuestions={() => setBudgetModal(null)}
+        />
+      ) : null}
+
+      {activateModal ? (
+        <VacancyActivateModal
+          vacancy={vacancy}
+          cvMaxScore={activateModal.cvMaxScore}
+          questionsTotal={activateModal.questionsTotal}
+          activating={activatingVacancy}
+          onActivate={handleActivateVacancy}
+          onClose={() => setActivateModal(null)}
         />
       ) : null}
       
