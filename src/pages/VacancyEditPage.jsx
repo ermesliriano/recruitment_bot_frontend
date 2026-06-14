@@ -49,6 +49,7 @@ export default function VacancyEditPage() {
   const [errors, setErrors] = useState({});
   const [loadedVacancy, setLoadedVacancy] = useState(null);
   const [budgetModal, setBudgetModal] = useState(null);
+  const [usedPoints, setUsedPoints] = useState(0);
 
   const [form, setForm] = useState({
     code: "",
@@ -107,6 +108,29 @@ export default function VacancyEditPage() {
 
     load();
     return () => { ignore = true; };
+  }, [vacancyId]);
+
+  // Carga no bloqueante de las preguntas para mostrar los puntos ya utilizados.
+  // Se hace en un efecto aparte para no retrasar la aparición del formulario.
+  useEffect(() => {
+    if (!vacancyId) return;
+    let ignore = false;
+
+    listVacancyQuestions(vacancyId)
+      .then((questions) => {
+        if (ignore) return;
+        const list = Array.isArray(questions) ? questions : [];
+        setUsedPoints(
+          list.reduce((sum, q) => sum + (Number(q.max_points) || 0), 0)
+        );
+      })
+      .catch(() => {
+        if (!ignore) setUsedPoints(0);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [vacancyId]);
 
   function handleChange(e) {
@@ -319,6 +343,8 @@ export default function VacancyEditPage() {
             <div className="notice">
               Puntos disponibles para preguntas:{" "}
               <strong>{Math.max(0, 100 - (Number(form.cv_max_score) || 0))}</strong> de 100.
+              <br />
+              Puntos ya utilizados en preguntas: <strong>{usedPoints}</strong>
             </div>
           </div>
 

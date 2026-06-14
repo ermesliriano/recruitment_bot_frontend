@@ -412,9 +412,21 @@ export default function VacancyQuestionsPage() {
       <section className="card">
         <div className="row-space" style={{ marginBottom: 16 }}>
           <h2 className="h2">Preguntas configuradas</h2>
-          <span className="muted" style={{ fontSize: "0.9rem" }}>
-            Puntos asignados en preguntas: <strong>{usedPoints}</strong>
-          </span>
+          <div
+            className="muted"
+            style={{ fontSize: "0.9rem", textAlign: "right", display: "grid", gap: 2 }}
+          >
+            <span>
+              Puntos asignados en preguntas: <strong>{usedPoints}</strong>
+            </span>
+            <span>
+              Puntos asignados a CV: <strong>{vacancy?.cv_max_score ?? 0}</strong>
+            </span>
+            <span>
+              Puntos asignados en total:{" "}
+              <strong>{usedPoints + (Number(vacancy?.cv_max_score) || 0)}</strong>
+            </span>
+          </div>
         </div>
 
         {questionsLoading ? (
