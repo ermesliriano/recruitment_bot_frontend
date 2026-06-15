@@ -199,18 +199,18 @@ export default function DashboardPage() {
       </section>
 
       <VacancySelector
-        title="Tenant y vacante de trabajo"
-        description="Selecciona el tenant y la vacante con la que quieres trabajar en ranking, detalle y formularios."
+        title="Vacante de trabajo"
+        description="Selecciona la vacante con la que quieres trabajar en ranking, detalle y formularios."
         onLoaded={setVacancies}
       />
 
       <section className="grid grid-stats">
         <StatCard
-          title="Vacantes del tenant"
+          title="Vacantes de la Empresa"
           value={vacancies.length}
           description={
             tenantId
-              ? `Tenant activo: ${tenantName || tenantId}`
+              ? `Usuario activo de la empresa ${tenantName || tenantId}`
               : "Selecciona un tenant para visualizar sus vacantes."
           }
           actionLabel="Crear vacante"
@@ -259,9 +259,9 @@ export default function DashboardPage() {
       <section className="card">
         <div className="row-space">
           <div>
-            <h2 className="h2">Vacantes del tenant</h2>
+            <h2 className="h2">Vacantes de la empresa</h2>
             <p className="muted">
-              Listado de vacantes del tenant con acceso directo al ranking, preguntas y configuración.
+              Listado de vacantes de la empresa con acceso directo al ranking, preguntas y configuración.
             </p>
           </div>
           <div className="row">
