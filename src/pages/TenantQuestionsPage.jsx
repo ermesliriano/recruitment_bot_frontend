@@ -367,7 +367,7 @@ export default function TenantQuestionsPage() {
       <section className="card">
         <div className="row-space">
           <div>
-            <h1 className="h1">Preguntas genéricas del tenant</h1>
+            <h1 className="h1">Preguntas comunes para todas las vacantes de la empresa</h1>
             <p className="muted">
               Se preguntan a todos los candidatos antes del CV e influyen en el CV Score del LLM.
               Las preguntas condicionales solo se muestran si se cumple la condición indicada.
@@ -380,13 +380,15 @@ export default function TenantQuestionsPage() {
       </section>
 
       {/* Selector de tenant */}
-      <VacancySelector
-        title="Tenant"
-        description="Selecciona el tenant al que pertenecen estas preguntas genéricas."
-        showVacancyField={false}
-        showLoadButton={false}
-        autoLoad={false}
-      />
+      {false && (
+        <VacancySelector
+          title="Tenant"
+          description="Selecciona el tenant al que pertenecen estas preguntas genéricas."
+          showVacancyField={false}
+          showLoadButton={false}
+          autoLoad={false}
+        />
+      )}
 
       {/* Listado */}
       <section className="card">
