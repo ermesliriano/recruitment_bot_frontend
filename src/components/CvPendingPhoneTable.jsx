@@ -65,7 +65,7 @@ export default function CvPendingPhoneTable({ rows, onResolve, busyId = null }) 
                     <input
                       className="input"
                       type="tel"
-                      placeholder="+34600000000"
+                      placeholder="+18495555555"
                       value={value}
                       disabled={busy}
                       onChange={(event) => setPhone(row.id, event.target.value)}
