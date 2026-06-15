@@ -161,7 +161,7 @@ export default function RankingPage() {
 
       <VacancySelector
         title="Contexto del ranking"
-        description="Selecciona el tenant y la vacante para cargar el ranking de candidatos."
+        description="Selecciona la vacante para cargar el ranking de candidatos."
       />
 
       {!tenantId || !vacancyId ? (

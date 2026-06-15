@@ -143,7 +143,7 @@ export default function CvImportsPage() {
 
       <VacancySelector
         title="Contexto de importación"
-        description="Selecciona el tenant y la vacante a la que se asociarán los CVs."
+        description="Selecciona la vacante a la que se asociarán los CVs."
       />
 
       <CvUploadPanel files={files} onFilesChange={setFiles} disabled={submitting} />
