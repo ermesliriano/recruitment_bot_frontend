@@ -312,7 +312,7 @@ export default function VacancyEditPage() {
           <div>
             <h1 className="h1">Editar vacante</h1>
             <p className="muted">
-              Código: <strong>{form.code}</strong> · ID: <strong>{vacancyId}</strong>
+              Código: <strong>{form.code}</strong> · Vacante: <strong>{form.title || vacancyId || "No definida"}</strong>
             </p>
           </div>
           <div className="row">
