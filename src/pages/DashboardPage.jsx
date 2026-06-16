@@ -172,7 +172,7 @@ export default function DashboardPage() {
         </span>
       ),
     },
-    { key: "title", label: "Título" },
+    { key: "title", label: "Vacante" },
     { key: "cv_max_score", label: "CV pts." },
   ];
 
