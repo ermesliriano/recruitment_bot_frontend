@@ -1,12 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import VacancyBudgetModal from "../components/VacancyBudgetModal";
+import VacancyActionsModal from "../components/VacancyActionsModal";
 import StatCard from "../components/StatCard";
 import Table from "../components/Table";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
 import { getRanking, listVacancyQuestions, setVacancyStatus, deleteVacancy } from "../lib/api";
 import { getVacancyBudget } from "../lib/scoringBudget";
+
+function formatVacancyDate(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 export default function DashboardPage() {
   const {
@@ -27,6 +39,8 @@ export default function DashboardPage() {
   const [budgetModal, setBudgetModal] = useState(null); // { vacancy, total }
   const [activating, setActivating] = useState(null); // id en proceso
   const [deletingVacancyId, setDeletingVacancyId] = useState(null);
+  // Modal de acciones que se abre al pulsar el título de una vacante.
+  const [actionsModalVacancy, setActionsModalVacancy] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -166,14 +180,34 @@ export default function DashboardPage() {
     {
       key: "status",
       label: "Estado",
-      render: (row) => (
+      cell: (row) => (
         <span className={`status-badge ${row.status?.toLowerCase()}`}>
           {row.status?.toLowerCase()}
         </span>
       ),
     },
-    { key: "title", label: "Vacante" },
+    {
+      key: "title",
+      label: "Vacante",
+      cell: (row) => (
+        <button
+          type="button"
+          className="vacancy-title-btn"
+          title="Ver acciones de la vacante"
+          onClick={() => setActionsModalVacancy(row)}
+        >
+          {row.title}
+        </button>
+      ),
+    },
+    { key: "questions_total_points", label: "Total pts. preguntas" },
     { key: "cv_max_score", label: "CV pts." },
+    { key: "applications_count", label: "Candidaturas evaluadas" },
+    {
+      key: "created_at",
+      label: "Fecha de creación",
+      cell: (row) => formatVacancyDate(row.created_at),
+    },
   ];
 
   return (
@@ -187,6 +221,40 @@ export default function DashboardPage() {
           onGoToQuestions={() => {
             navigate(`/vacancies/${budgetModal.vacancy.id}/questions`);
             setBudgetModal(null);
+          }}
+        />
+      ) : null}
+
+      {actionsModalVacancy ? (
+        <VacancyActionsModal
+          vacancy={actionsModalVacancy}
+          isDeleting={deletingVacancyId === actionsModalVacancy.id}
+          isToggling={activating === actionsModalVacancy.id}
+          onClose={() => setActionsModalVacancy(null)}
+          onRanking={() => {
+            const row = actionsModalVacancy;
+            setActionsModalVacancy(null);
+            handleOpenRanking(row);
+          }}
+          onQuestions={() => {
+            const row = actionsModalVacancy;
+            setActionsModalVacancy(null);
+            handleOpenQuestions(row);
+          }}
+          onEdit={() => {
+            const row = actionsModalVacancy;
+            setActionsModalVacancy(null);
+            handleEdit(row);
+          }}
+          onDelete={() => {
+            const row = actionsModalVacancy;
+            setActionsModalVacancy(null);
+            handleDeleteVacancy(row);
+          }}
+          onToggleStatus={() => {
+            const row = actionsModalVacancy;
+            setActionsModalVacancy(null);
+            handleToggleStatus(row);
           }}
         />
       ) : null}
@@ -290,48 +358,6 @@ export default function DashboardPage() {
               ? "No hay vacantes registradas para este tenant."
               : "Selecciona un tenant para consultar sus vacantes."
           }
-          renderActions={(row) => {
-            const status = row.status?.toLowerCase();
-            const isActivating = activating === row.id;
-            return (
-              <div className="table-actions">
-			  {/*<button className="btn small" type="button" onClick={() => handleUseVacancy(row)}>
-                  Usar
-			  </button>*/}
-                <button className="btn small primary" type="button" onClick={() => handleOpenRanking(row)}>
-                  Ranking
-                </button>
-                <button className="btn small" type="button" onClick={() => handleOpenQuestions(row)}>
-                  Preguntas
-                </button>
-                <button className="btn small" type="button" onClick={() => handleEdit(row)}>
-                  Editar
-                </button>
-                <button
-                  className="btn small danger"
-                  type="button"
-                  title="Eliminar vacante"
-                  aria-label={`Eliminar vacante ${row.title}`}
-                  disabled={deletingVacancyId === row.id}
-                  onClick={() => handleDeleteVacancy(row)}
-                >
-                  {deletingVacancyId === row.id ? "…" : "🗑️"}
-                </button>
-                <button
-                  className={`btn small${status === "active" ? "" : " primary"}`}
-                  type="button"
-                  disabled={isActivating}
-                  onClick={() => handleToggleStatus(row)}
-                >
-                  {isActivating
-                    ? "…"
-                    : status === "active"
-                    ? "Archivar"
-                    : "Activar"}
-                </button>
-              </div>
-            );
-          }}
         />
       </section>
     </>

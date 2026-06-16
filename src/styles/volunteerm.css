@@ -642,6 +642,41 @@ select.input:focus {
   margin-top: 4px;
 }
 
+.modal-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.modal-action-grid .btn {
+  width: 100%;
+}
+
+.modal-action-wide {
+  grid-column: 1 / -1;
+}
+
+/* ── Vacante: título clicable que abre el modal de acciones ── */
+
+.vacancy-title-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(216, 155, 63, 0.5);
+  transition: color 0.18s ease;
+}
+
+.vacancy-title-btn:hover {
+  color: var(--text-dark);
+  text-decoration-color: currentColor;
+}
+
 /* ── Status badge ─────────────────────────────────────────── */
 
 .status-badge {
