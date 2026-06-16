@@ -415,10 +415,8 @@ export default function TenantQuestionsPage() {
                     {conditionBadge(item.display_condition)}
                   </span>
                   <span className="question-row-meta">
+					{"Tipo de respuesta: "}
                     {TYPE_LABEL[item.answer_type] ?? item.answer_type}
-                    {" · campo: "}
-                    {item.field_key}
-                    {!item.required ? " · opcional" : ""}
                   </span>
                 </span>
                 <button className="btn small" type="button" onClick={() => startEdit(item)}>
