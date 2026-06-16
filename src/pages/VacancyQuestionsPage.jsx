@@ -436,7 +436,7 @@ export default function VacancyQuestionsPage() {
           <div>
             <h1 className="h1">Preguntas de la vacante</h1>
             <p className="muted">
-              Vacante: <strong>{routeVacancyId || "No definida"}</strong>
+              Vacante: <strong>{vacancy?.title || routeVacancyId || "No definida"}</strong>
             </p>
           </div>
           <div className="row">
