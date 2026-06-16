@@ -173,7 +173,7 @@ export default function DashboardPage() {
       ),
     },
     { key: "title", label: "Título" },
-    { key: "cv_max_score", label: "CV máx." },
+    { key: "cv_max_score", label: "CV pts." },
   ];
 
   return (
