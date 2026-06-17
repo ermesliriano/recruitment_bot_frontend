@@ -12,3 +12,17 @@ export function formatOrigin(origin) {
 
   return origin;
 }
+
+// Recomendación del análisis del CV (LLM) → etiqueta legible en español.
+const RECOMMENDATION_LABELS = {
+  muy_idoneo: "Muy idóneo",
+  idoneo: "Idóneo",
+  revisar: "Revisar",
+  no_idoneo: "No idóneo",
+};
+
+export function formatRecommendation(value) {
+  const key = String(value || "").trim().toLowerCase();
+  if (!key) return "—";
+  return RECOMMENDATION_LABELS[key] || value;
+}

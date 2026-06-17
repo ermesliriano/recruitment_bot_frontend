@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { getApplicationDetail } from "../lib/api";
-import { formatOrigin } from "../lib/labels";
+import { formatOrigin, formatRecommendation } from "../lib/labels";
 
 function formatScore(value) {
   if (value === null || value === undefined || value === "") {
@@ -46,6 +46,47 @@ function buildSummaryItems(data) {
   }
 
   return items;
+}
+
+function AnalysisText({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="analysis-section">
+      <span className="detail-label">{label}</span>
+      <p className="analysis-text">{value}</p>
+    </div>
+  );
+}
+
+function AnalysisList({ label, items }) {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (list.length === 0) return null;
+  return (
+    <div className="analysis-section">
+      <span className="detail-label">{label}</span>
+      <ul className="analysis-list">
+        {list.map((item, index) => (
+          <li key={`${label}-${index}`}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function analysisHasContent(analysis) {
+  if (!analysis) return false;
+  return Boolean(
+    analysis.human_readable_summary ||
+      analysis.qualitative_assessment ||
+      analysis.score_rationale ||
+      analysis.recommended_next_action ||
+      analysis.skills?.length ||
+      analysis.experience_summary?.length ||
+      analysis.red_flags?.length ||
+      analysis.missing_evidence?.length ||
+      analysis.fit_gaps?.length ||
+      analysis.follow_up_questions?.length
+  );
 }
 
 export default function ApplicationDetailPage() {
@@ -100,6 +141,7 @@ export default function ApplicationDetailPage() {
   const otherApplications = Array.isArray(data?.other_applications)
     ? data.other_applications
     : [];
+  const analysis = data?.analysis || null;
 
   return (
     <>
@@ -156,10 +198,59 @@ export default function ApplicationDetailPage() {
               <span className="detail-label">Recomendación del análisis</span>
               <p className="recommendation-text">
                 {data.recommendation
-                  ? data.recommendation
+                  ? formatRecommendation(data.recommendation)
                   : "Esta candidatura aún no tiene una recomendación generada por el análisis del CV."}
               </p>
             </div>
+          </section>
+
+          <section className="card">
+            <h2 className="h2">Análisis del CV</h2>
+            {analysisHasContent(analysis) ? (
+              <>
+                <AnalysisText
+                  label="Resumen ejecutivo"
+                  value={analysis.human_readable_summary}
+                />
+                <AnalysisText
+                  label="Valoración cualitativa"
+                  value={analysis.qualitative_assessment}
+                />
+                <AnalysisText
+                  label="Justificación de la puntuación"
+                  value={analysis.score_rationale}
+                />
+                <AnalysisText
+                  label="Acción recomendada"
+                  value={analysis.recommended_next_action}
+                />
+                <AnalysisList label="Competencias" items={analysis.skills} />
+                <AnalysisList
+                  label="Resumen de experiencia"
+                  items={analysis.experience_summary}
+                />
+                <AnalysisList
+                  label="Alertas (red flags)"
+                  items={analysis.red_flags}
+                />
+                <AnalysisList
+                  label="Información no evidenciada"
+                  items={analysis.missing_evidence}
+                />
+                <AnalysisList
+                  label="Brechas frente al perfil"
+                  items={analysis.fit_gaps}
+                />
+                <AnalysisList
+                  label="Preguntas de seguimiento"
+                  items={analysis.follow_up_questions}
+                />
+              </>
+            ) : (
+              <p className="muted">
+                El análisis cualitativo aún no está disponible para esta candidatura.
+              </p>
+            )}
           </section>
 
           <section className="card">
