@@ -576,6 +576,38 @@ select.input:focus {
   word-break: break-word;
 }
 
+/* ── Recomendación del análisis del CV ─────────────────────── */
+
+.recommendation-block {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 177, 90, 0.45);
+  background: rgba(232, 177, 90, 0.10);
+}
+
+.recommendation-text {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+/* ── Transcripción del texto extraído del CV ──────────────────── */
+
+.cv-transcript {
+  max-height: 460px;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #e0e2e6;
+  background: #fcfcfb;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
 .code-block {
   margin: 0;
   padding: 16px;

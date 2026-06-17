@@ -4,6 +4,7 @@ import Table from "../components/Table";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
 import { getRanking } from "../lib/api";
+import { formatOrigin } from "../lib/labels";
 
 function formatScore(value) {
   if (value === null || value === undefined || value === "") {
@@ -129,7 +130,11 @@ export default function RankingPage() {
     },
     { key: "telefono", label: "Teléfono" },
     { key: "vacante", label: "Vacante" },
-    { key: "origin", label: "Origen" },
+    {
+      key: "origin",
+      label: "Origen",
+      cell: (row) => formatOrigin(row.origin),
+    },
     { key: "channel", label: "Canal" },
     { key: "outbound_status", label: "Outbound" },
     {

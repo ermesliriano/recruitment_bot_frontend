@@ -1,29 +1,57 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { getApplicationDetail } from "../lib/api";
+import { formatOrigin } from "../lib/labels";
 
-function buildSummaryItems(data, tenantId, applicationId) {
-  return [
-    { label: "ID aplicación", value: data?.id || applicationId },
-    { label: "Tenant", value: data?.tenant_id || tenantId },
-    { label: "Vacancy ID", value: data?.vacancy_id },
-    { label: "Candidate ID", value: data?.candidate_id },
-    { label: "Origen", value: data?.origin },
-    { label: "Canal preferido", value: data?.preferred_platform },
-    { label: "Estado outbound", value: data?.last_outbound_status },
-    { label: "Canal outbound", value: data?.last_outbound_channel },
-    { label: "Template SID", value: data?.last_outbound_template_sid },
-    { label: "Estado", value: data?.classification || data?.status },
-    { label: "Score preguntas", value: data?.score_rules },
-    { label: "Score CV", value: data?.score_cv },
-    { label: "Score total", value: data?.score_total },
-  ].filter((item) => item.value !== undefined && item.value !== null && item.value !== "");
+function formatScore(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toFixed(2) : String(value);
+}
+
+function formatPlain(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+  return String(value);
+}
+
+function buildSummaryItems(data) {
+  const estado = data?.classification || data?.status;
+
+  const items = [
+    { label: "Empresa", value: formatPlain(data?.tenant_name) },
+    { label: "Vacante", value: formatPlain(data?.vacancy_title) },
+    { label: "Candidato", value: formatPlain(data?.candidate_full_name) },
+    { label: "Teléfono", value: formatPlain(data?.candidate_phone) },
+    { label: "Origen", value: formatOrigin(data?.origin) },
+    { label: "Canal", value: formatPlain(data?.preferred_platform) },
+    { label: "Estado", value: formatPlain(estado) },
+    { label: "Estado outbound", value: formatPlain(data?.last_outbound_status) },
+    { label: "Score preguntas", value: formatScore(data?.score_rules) },
+    { label: "Score CV", value: formatScore(data?.score_cv) },
+    { label: "Score total", value: formatScore(data?.score_total) },
+  ];
+
+  if (data?.is_disqualified) {
+    items.push({
+      label: "Descalificado",
+      value: data?.disqualification_reason
+        ? `Sí — ${data.disqualification_reason}`
+        : "Sí",
+    });
+  }
+
+  return items;
 }
 
 export default function ApplicationDetailPage() {
   const { applicationId } = useParams();
   const { tenantId } = useAppContext();
+  const navigate = useNavigate();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,10 +94,12 @@ export default function ApplicationDetailPage() {
     };
   }, [tenantId, applicationId]);
 
-  const summaryItems = useMemo(
-    () => buildSummaryItems(data, tenantId, applicationId),
-    [data, tenantId, applicationId]
-  );
+  const summaryItems = useMemo(() => buildSummaryItems(data), [data]);
+
+  const answers = Array.isArray(data?.answers) ? data.answers : [];
+  const otherApplications = Array.isArray(data?.other_applications)
+    ? data.other_applications
+    : [];
 
   return (
     <>
@@ -78,7 +108,8 @@ export default function ApplicationDetailPage() {
           <div>
             <h1 className="h1">Detalle de aplicación</h1>
             <p className="muted">
-              Información detallada de la candidatura seleccionada: puntuaciones, estado y datos del proceso de selección.
+              Información detallada de la candidatura seleccionada: respuestas del
+              candidato, análisis del CV y otras candidaturas dentro de la empresa.
             </p>
           </div>
 
@@ -95,7 +126,7 @@ export default function ApplicationDetailPage() {
 
       {!tenantId ? (
         <div className="warning-box">
-          Esta página requiere un tenant activo. Seleccionálo desde el dashboard o el ranking antes de acceder al detalle.
+          Esta página requiere un tenant activo. Selecciónalo desde el dashboard o el ranking antes de acceder al detalle.
         </div>
       ) : null}
 
@@ -110,55 +141,96 @@ export default function ApplicationDetailPage() {
       {data ? (
         <>
           <section className="card">
-            <h2 className="h2">Resumen</h2>
+            <h2 className="h2">Detalles de la aplicación</h2>
 
             <div className="detail-grid">
               {summaryItems.map((item) => (
                 <div key={item.label} className="detail-item">
                   <span className="detail-label">{item.label}</span>
-                  <span className="detail-value">{String(item.value)}</span>
+                  <span className="detail-value">{item.value}</span>
                 </div>
               ))}
             </div>
+
+            <div className="recommendation-block">
+              <span className="detail-label">Recomendación del análisis</span>
+              <p className="recommendation-text">
+                {data.recommendation
+                  ? data.recommendation
+                  : "Esta candidatura aún no tiene una recomendación generada por el análisis del CV."}
+              </p>
+            </div>
           </section>
 
-          {data?.latest_cv ? (
-            <section className="card">
-              <h2 className="h2">Último CV asociado</h2>
+          <section className="card">
+            <h2 className="h2">Respuestas del candidato</h2>
+            {answers.length === 0 ? (
+              <p className="muted">
+                Esta candidatura aún no tiene respuestas registradas.
+              </p>
+            ) : (
               <div className="detail-grid">
-                <div className="detail-item">
-                  <span className="detail-label">CV ID</span>
-                  <span className="detail-value">{String(data.latest_cv.id)}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Versión</span>
-                  <span className="detail-value">{String(data.latest_cv.version)}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Fichero</span>
-                  <span className="detail-value">{String(data.latest_cv.original_filename)}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">MIME</span>
-                  <span className="detail-value">{String(data.latest_cv.mime_type)}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Parse status</span>
-                  <span className="detail-value">{String(data.latest_cv.parse_status)}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Source platform</span>
-                  <span className="detail-value">{String(data.latest_cv.source_platform)}</span>
-                </div>
+                {answers.map((answer, index) => (
+                  <div
+                    key={`${answer.field_key || "respuesta"}-${index}`}
+                    className="detail-item"
+                  >
+                    <span className="detail-label">
+                      {answer.question_order != null
+                        ? `${answer.question_order}. ${answer.prompt}`
+                        : answer.prompt}
+                    </span>
+                    <span className="detail-value">
+                      {formatPlain(answer.answer)}
+                    </span>
+                  </div>
+                ))}
               </div>
-            </section>
-          ) : null}
+            )}
+          </section>
 
           <section className="card">
-            <h2 className="h2">Datos completos de la candidatura</h2>
-            <pre className="code-block">
-              {JSON.stringify(data, null, 2)}
-            </pre>
+            <h2 className="h2">Texto extraído del CV</h2>
+            {data.cv_extracted_text ? (
+              <div className="cv-transcript">{data.cv_extracted_text}</div>
+            ) : (
+              <p className="muted">
+                No hay texto extraído del CV para esta candidatura.
+              </p>
+            )}
+          </section>
+
+          <section className="card">
+            <h2 className="h2">Otras candidaturas en la empresa</h2>
+            {otherApplications.length === 0 ? (
+              <p className="muted">
+                Este candidato no ha aplicado a otras vacantes de la empresa.
+              </p>
+            ) : (
+              <div className="question-list">
+                {otherApplications.map((other) => (
+                  <div key={String(other.application_id)} className="question-row">
+                    <span className="question-row-info">
+                      <button
+                        type="button"
+                        className="vacancy-title-btn"
+                        onClick={() =>
+                          navigate(`/applications/${other.application_id}`)
+                        }
+                      >
+                        {other.vacancy_title || "Vacante sin título"}
+                      </button>
+                      <span className="question-row-meta">
+                        Estado: {formatPlain(other.classification || other.status)}
+                      </span>
+                    </span>
+                    <span className="question-row-points">
+                      {formatScore(other.score_total)} pts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </>
       ) : null}
