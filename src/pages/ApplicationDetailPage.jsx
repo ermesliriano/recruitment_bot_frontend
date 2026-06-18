@@ -76,10 +76,7 @@ function AnalysisList({ label, items }) {
 function analysisHasContent(analysis) {
   if (!analysis) return false;
   return Boolean(
-    analysis.human_readable_summary ||
-      analysis.qualitative_assessment ||
-      analysis.score_rationale ||
-      analysis.recommended_next_action ||
+    analysis.recommended_next_action ||
       analysis.skills?.length ||
       analysis.experience_summary?.length ||
       analysis.red_flags?.length ||
@@ -194,6 +191,19 @@ export default function ApplicationDetailPage() {
               ))}
             </div>
 
+            <AnalysisText
+              label="Resumen ejecutivo"
+              value={analysis?.human_readable_summary}
+            />
+            <AnalysisText
+              label="Valoración cualitativa"
+              value={analysis?.qualitative_assessment}
+            />
+            <AnalysisText
+              label="Justificación de la puntuación"
+              value={analysis?.score_rationale}
+            />
+
             <div className="recommendation-block">
               <span className="detail-label">Recomendación del análisis</span>
               <p className="recommendation-text">
@@ -208,18 +218,6 @@ export default function ApplicationDetailPage() {
             <h2 className="h2">Análisis del CV</h2>
             {analysisHasContent(analysis) ? (
               <>
-                <AnalysisText
-                  label="Resumen ejecutivo"
-                  value={analysis.human_readable_summary}
-                />
-                <AnalysisText
-                  label="Valoración cualitativa"
-                  value={analysis.qualitative_assessment}
-                />
-                <AnalysisText
-                  label="Justificación de la puntuación"
-                  value={analysis.score_rationale}
-                />
                 <AnalysisText
                   label="Acción recomendada"
                   value={analysis.recommended_next_action}
