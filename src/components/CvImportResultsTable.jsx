@@ -36,7 +36,6 @@ export default function CvImportResultsTable({ rows, loading = false, onRetry })
                 <th>Fichero</th>
                 <th>Teléfono</th>
                 <th>Candidato</th>
-                <th>Application</th>
                 <th>Estado</th>
                 <th>Outbound</th>
                 <th>Acción</th>
@@ -47,8 +46,7 @@ export default function CvImportResultsTable({ rows, loading = false, onRetry })
                 <tr key={row.id}>
                   <td>{row.original_filename}</td>
                   <td>{row.detected_phone_e164 || "—"}</td>
-                  <td>{row.candidate_id || "—"}</td>
-                  <td>{row.application_id || "—"}</td>
+                  <td>{row.candidate_full_name || "—"}</td>
                   <td><OutboundStatusBadge status={row.status} /></td>
                   <td><OutboundStatusBadge status={row.outbound_status} /></td>
                   <td>
