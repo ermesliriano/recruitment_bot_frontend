@@ -23,6 +23,8 @@ export default function RankingPage() {
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
+  const [incomplete, setIncomplete] = useState([]);
+  const [incompleteTotal, setIncompleteTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const requestIdRef = useRef(0);
@@ -62,6 +64,8 @@ export default function RankingPage() {
     if (!tenantId || !vacancyId) {
       setRows([]);
       setTotal(0);
+      setIncomplete([]);
+      setIncompleteTotal(0);
       setError("");
       setLoading(false);
       return;
@@ -87,12 +91,19 @@ export default function RankingPage() {
       setTotal(
         data?.total ?? (Array.isArray(data?.items) ? data.items.length : 0)
       );
+      setIncomplete(Array.isArray(data?.incomplete) ? data.incomplete : []);
+      setIncompleteTotal(
+        data?.incomplete_total ??
+          (Array.isArray(data?.incomplete) ? data.incomplete.length : 0)
+      );
     } catch (loadError) {
       if (requestId !== requestIdRef.current) {
         return;
       }
       setRows([]);
       setTotal(0);
+      setIncomplete([]);
+      setIncompleteTotal(0);
       setError(loadError.message || "No se pudo cargar el ranking.");
     } finally {
       if (requestId === requestIdRef.current) {
@@ -105,28 +116,30 @@ export default function RankingPage() {
     loadRanking();
   }, [loadRanking]);
 
+  const renderNameCell = (row) => (
+    <button
+      type="button"
+      onClick={() => navigate(`/applications/${row.application_id}`)}
+      style={{
+        background: "none",
+        border: "none",
+        padding: 0,
+        color: "var(--primary-strong)",
+        cursor: "pointer",
+        textDecoration: "underline",
+        font: "inherit",
+        textAlign: "left",
+      }}
+    >
+      {row.nombre || "—"}
+    </button>
+  );
+
   const columns = [
     {
       key: "nombre",
       label: "Nombre",
-      cell: (row) => (
-        <button
-          type="button"
-          onClick={() => navigate(`/applications/${row.application_id}`)}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            color: "var(--primary-strong)",
-            cursor: "pointer",
-            textDecoration: "underline",
-            font: "inherit",
-            textAlign: "left",
-          }}
-        >
-          {row.nombre || "—"}
-        </button>
-      ),
+      cell: renderNameCell,
     },
     { key: "telefono", label: "Teléfono" },
     { key: "vacante", label: "Vacante" },
@@ -153,6 +166,15 @@ export default function RankingPage() {
       cell: (row) => formatScore(row.score_total),
     },
     { key: "estado", label: "Estado" },
+  ];
+
+  const incompleteColumns = [
+    { key: "nombre", label: "Nombre", cell: renderNameCell },
+    { key: "telefono", label: "Teléfono" },
+    { key: "vacante", label: "Vacante" },
+    { key: "origin", label: "Origen", cell: (row) => formatOrigin(row.origin) },
+    { key: "channel", label: "Canal" },
+    { key: "outbound_status", label: "Outbound" },
   ];
 
   return (
@@ -202,6 +224,22 @@ export default function RankingPage() {
           }
         />
       </section>
+
+      {incomplete.length > 0 ? (
+        <section className="card">
+          <h2 className="h2">Candidaturas incompletas</h2>
+          <p className="muted">
+            Candidatos que no completaron el proceso, por lo que aún no tienen
+            puntuación. Total: <strong>{incompleteTotal}</strong>
+          </p>
+
+          <Table
+            columns={incompleteColumns}
+            rows={incomplete}
+            emptyText="No hay candidaturas incompletas para esta vacante."
+          />
+        </section>
+      ) : null}
     </>
   );
 }
