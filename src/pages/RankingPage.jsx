@@ -175,6 +175,7 @@ export default function RankingPage() {
     { key: "origin", label: "Origen", cell: (row) => formatOrigin(row.origin) },
     { key: "channel", label: "Canal" },
     { key: "outbound_status", label: "Outbound" },
+    { key: "stage", label: "Punto del flujo" },
   ];
 
   return (
