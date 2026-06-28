@@ -149,7 +149,6 @@ export default function RankingPage() {
       cell: (row) => formatOrigin(row.origin),
     },
     { key: "channel", label: "Canal" },
-    { key: "outbound_status", label: "Outbound" },
     {
       key: "score_rules",
       label: "Score preguntas",
@@ -174,7 +173,6 @@ export default function RankingPage() {
     { key: "vacante", label: "Vacante" },
     { key: "origin", label: "Origen", cell: (row) => formatOrigin(row.origin) },
     { key: "channel", label: "Canal" },
-    { key: "outbound_status", label: "Outbound" },
     { key: "stage", label: "Punto del flujo" },
   ];
 
