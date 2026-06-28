@@ -47,7 +47,7 @@ export default function CvImportResultsTable({ rows, loading = false, onRetry })
                   <td>{row.original_filename}</td>
                   <td>{row.detected_phone_e164 || "—"}</td>
                   <td>{row.candidate_full_name || "—"}</td>
-                  <td><OutboundStatusBadge status={row.status} /></td>
+                  <td><OutboundStatusBadge status={row.effective_status || row.status} /></td>
                   <td><OutboundStatusBadge status={row.outbound_status} /></td>
                   <td>
                     {row.status === "blocked_no_opt_in" || row.outbound_status === "failed" ? (
