@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { getApplicationDetail } from "../lib/api";
+import { getApplicationDetail, getRanking } from "../lib/api";
 import { formatOrigin, formatRecommendation } from "../lib/labels";
 
 function formatScore(value) {
@@ -94,6 +94,11 @@ export default function ApplicationDetailPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [neighbors, setNeighbors] = useState({ prevId: null, nextId: null });
+
+  // Cache del ranking de la vacante (solo candidaturas completadas) para no
+  // recargarlo al saltar entre candidaturas de la misma vacante.
+  const rankingCacheRef = useRef({ vacancyId: null, items: [] });
 
   useEffect(() => {
     let ignore = false;
@@ -132,6 +137,58 @@ export default function ApplicationDetailPage() {
     };
   }, [tenantId, applicationId]);
 
+  // Navegacion anterior/siguiente dentro del ranking (solo completadas).
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadNeighbors() {
+      const vacancyId = data?.vacancy_id;
+
+      if (!tenantId || !vacancyId || !applicationId) {
+        setNeighbors({ prevId: null, nextId: null });
+        return;
+      }
+
+      let items = rankingCacheRef.current.items;
+
+      if (rankingCacheRef.current.vacancyId !== vacancyId) {
+        try {
+          const ranking = await getRanking(tenantId, vacancyId);
+          if (ignore) return;
+          items = Array.isArray(ranking?.items) ? ranking.items : [];
+          rankingCacheRef.current = { vacancyId, items };
+        } catch {
+          if (ignore) return;
+          items = [];
+          rankingCacheRef.current = { vacancyId, items: [] };
+        }
+      }
+
+      const index = items.findIndex(
+        (item) => String(item.application_id) === String(applicationId)
+      );
+
+      if (index === -1) {
+        // La candidatura actual no esta en el ranking (p. ej. es incompleta):
+        // no se ofrece navegacion.
+        setNeighbors({ prevId: null, nextId: null });
+        return;
+      }
+
+      setNeighbors({
+        prevId: index > 0 ? items[index - 1].application_id : null,
+        nextId:
+          index < items.length - 1 ? items[index + 1].application_id : null,
+      });
+    }
+
+    loadNeighbors();
+
+    return () => {
+      ignore = true;
+    };
+  }, [tenantId, applicationId, data?.vacancy_id]);
+
   const summaryItems = useMemo(() => buildSummaryItems(data), [data]);
 
   const answers = Array.isArray(data?.answers) ? data.answers : [];
@@ -153,6 +210,24 @@ export default function ApplicationDetailPage() {
           </div>
 
           <div className="row">
+            {neighbors.prevId ? (
+              <button
+                className="btn"
+                type="button"
+                onClick={() => navigate(`/applications/${neighbors.prevId}`)}
+              >
+                ← Anterior
+              </button>
+            ) : null}
+            {neighbors.nextId ? (
+              <button
+                className="btn"
+                type="button"
+                onClick={() => navigate(`/applications/${neighbors.nextId}`)}
+              >
+                Siguiente →
+              </button>
+            ) : null}
             <Link className="btn" to="/ranking">
               Volver al ranking
             </Link>
