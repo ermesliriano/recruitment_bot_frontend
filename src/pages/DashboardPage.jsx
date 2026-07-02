@@ -347,6 +347,13 @@ export default function DashboardPage() {
             >
               Preguntas genéricas
             </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate("/conversation-flow")}
+            >
+              Flujo de conversación
+            </button>
           </div>
         </div>
 

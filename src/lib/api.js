@@ -574,3 +574,20 @@ export async function resolveCvImportPhone(tenantId, jobId, itemId, phone, optio
     }
   );
 }
+
+// ── Flujo de conversación por tenant (bot clásico vs flujo LLM) ──────────
+// Solo máximos administradores (token de administrador).
+
+export async function getConversationFlow(tenantId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/conversation-flow`,
+    { method: "GET", token: options.token }
+  );
+}
+
+export async function updateConversationFlow(tenantId, payload, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/conversation-flow`,
+    { method: "PUT", body: payload, token: options.token }
+  );
+}

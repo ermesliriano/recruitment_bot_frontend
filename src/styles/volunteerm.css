@@ -459,6 +459,24 @@ select.input:focus {
   color: #991b1b;
 }
 
+.success-box {
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(34, 154, 88, 0.45);
+  background: rgba(34, 154, 88, 0.10);
+  color: #14532d;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
 .row {
   display: flex;
   align-items: center;
