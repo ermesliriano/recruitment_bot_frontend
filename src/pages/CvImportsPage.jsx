@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import CvImportResultsTable from "../components/CvImportResultsTable";
 import CvPendingPhoneTable from "../components/CvPendingPhoneTable";
 import CvUploadPanel from "../components/CvUploadPanel";
+import Modal from "../components/Modal";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
 import {
@@ -56,6 +57,7 @@ export default function CvImportsPage() {
   const [resolvingId, setResolvingId] = useState(null);
   const [scheduledAt, setScheduledAt] = useState("");
   const [sendingNowJobId, setSendingNowJobId] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const loadRows = useCallback(async () => {
     if (!tenantId || !vacancyId) {
@@ -148,6 +150,18 @@ export default function CvImportsPage() {
     }
   }
 
+  function handleOpenScheduleModal() {
+    if (!tenantId || !vacancyId) {
+      pushFlash("warning", "Selecciona antes tenant y vacante.");
+      return;
+    }
+    if (files.length === 0) {
+      pushFlash("warning", "Debes adjuntar al menos un CV.");
+      return;
+    }
+    setShowScheduleModal(true);
+  }
+
   function handleSchedule() {
     if (!scheduledAt) {
       pushFlash("warning", "Indica la fecha y hora de envío.");
@@ -158,6 +172,7 @@ export default function CvImportsPage() {
       pushFlash("warning", "La fecha programada debe ser futura.");
       return;
     }
+    setShowScheduleModal(false);
     handleSubmit(parsed.toISOString());
   }
 
@@ -233,30 +248,61 @@ export default function CvImportsPage() {
           >
             {submitting ? "Procesando..." : "Procesar CVs"}
           </button>
-          <input
-            className="input"
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            disabled={submitting}
-            style={{ maxWidth: 240 }}
-            aria-label="Fecha y hora de envío programado"
-          />
           <button
             className="btn"
             type="button"
-            disabled={submitting || !scheduledAt}
-            onClick={handleSchedule}
+            disabled={submitting}
+            onClick={handleOpenScheduleModal}
           >
-            {submitting ? "Procesando..." : "Programar CVs"}
+            Programar CVs
           </button>
         </div>
-        <p className="muted" style={{ marginTop: 8 }}>
-          Con «Programar CVs» los candidatos no recibirán ningún mensaje hasta la
-          fecha y hora indicadas. La detección del teléfono sí se hace al momento,
-          para que puedas corregir los CVs sin número antes del envío.
-        </p>
       </section>
+
+      {showScheduleModal ? (
+        <Modal
+          title="Programar envío de CVs"
+          onClose={() => setShowScheduleModal(false)}
+          actions={
+            <>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => setShowScheduleModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn primary"
+                type="button"
+                disabled={!scheduledAt || submitting}
+                onClick={handleSchedule}
+              >
+                Programar
+              </button>
+            </>
+          }
+        >
+          <p className="muted">
+            Los candidatos no recibirán ningún mensaje hasta la fecha y hora
+            indicadas. La detección del teléfono sí se hace al momento, para que
+            puedas corregir los CVs sin número antes del envío.
+          </p>
+          <div className="field">
+            <label className="field-label" htmlFor="schedule-datetime">
+              Fecha y hora de envío
+            </label>
+            <input
+              id="schedule-datetime"
+              className="input"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </Modal>
+      ) : null}
 
       {scheduledJobs.map((job) => (
         <section className="card" key={job.jobId}>
