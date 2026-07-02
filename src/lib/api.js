@@ -521,6 +521,9 @@ export async function probeAdminToken({
 export async function createCvImportJob(tenantId, vacancyId, files, options = {}) {
   const formData = new FormData();
   formData.append("vacancy_id", vacancyId);
+  if (options.scheduledAt) {
+    formData.append("scheduled_at", options.scheduledAt);
+  }
   files.forEach((file) => formData.append("files", file));
 
   return apiFetch(
@@ -528,6 +531,17 @@ export async function createCvImportJob(tenantId, vacancyId, files, options = {}
     {
       method: "POST",
       body: formData,
+      token: options.token,
+    }
+  );
+}
+
+export async function runScheduledCvImports(tenantId, jobId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports/run-scheduled`,
+    {
+      method: "POST",
+      query: jobId ? { job_id: jobId } : {},
       token: options.token,
     }
   );

@@ -9,6 +9,7 @@ import {
   listCvImportJobs,
   resolveCvImportPhone,
   retryOutboundMessage,
+  runScheduledCvImports,
 } from "../lib/api";
 
 // Estados de un ítem cuyo teléfono no pudo determinarse automáticamente.
@@ -26,8 +27,23 @@ function flattenJobsToRows(jobs) {
     (Array.isArray(job?.items) ? job.items : []).map((item) => ({
       ...item,
       _jobId: job.id,
+      _jobStatus: job.status,
+      _scheduledAt: job?.summary_json?.scheduled_at || null,
     }))
   );
+}
+
+function formatScheduledAt(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function CvImportsPage() {
@@ -38,6 +54,8 @@ export default function CvImportsPage() {
   const [loadingRows, setLoadingRows] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [sendingNowJobId, setSendingNowJobId] = useState(null);
 
   const loadRows = useCallback(async () => {
     if (!tenantId || !vacancyId) {
@@ -60,11 +78,22 @@ export default function CvImportsPage() {
     loadRows();
   }, [loadRows]);
 
-  const { processedRows, pendingRows } = useMemo(() => {
+  const { processedRows, pendingRows, scheduledRows } = useMemo(() => {
     const processed = [];
     const pending = [];
+    const scheduled = [];
 
     rows.forEach((row) => {
+      if (row._jobStatus === "scheduled") {
+        // Dashboard especifico: items de jobs programados. Los pendientes de
+        // telefono de esos jobs van al listado habitual de correccion.
+        if (PENDING_PHONE_STATUSES.includes(row.status)) {
+          pending.push(row);
+        } else {
+          scheduled.push(row);
+        }
+        return;
+      }
       if (PENDING_PHONE_STATUSES.includes(row.status)) {
         pending.push(row);
       } else {
@@ -72,10 +101,22 @@ export default function CvImportsPage() {
       }
     });
 
-    return { processedRows: processed, pendingRows: pending };
+    return { processedRows: processed, pendingRows: pending, scheduledRows: scheduled };
   }, [rows]);
 
-  async function handleSubmit() {
+  // Lotes programados agrupados por job (puede haber varios a la vez).
+  const scheduledJobs = useMemo(() => {
+    const byJob = new Map();
+    scheduledRows.forEach((row) => {
+      if (!byJob.has(row._jobId)) {
+        byJob.set(row._jobId, { jobId: row._jobId, scheduledAt: row._scheduledAt, items: [] });
+      }
+      byJob.get(row._jobId).items.push(row);
+    });
+    return Array.from(byJob.values());
+  }, [scheduledRows]);
+
+  async function handleSubmit(scheduleIso = null) {
     if (!tenantId || !vacancyId) {
       pushFlash("warning", "Selecciona antes tenant y vacante.");
       return;
@@ -88,14 +129,48 @@ export default function CvImportsPage() {
 
     try {
       setSubmitting(true);
-      await createCvImportJob(tenantId, vacancyId, files);
+      await createCvImportJob(tenantId, vacancyId, files, {
+        scheduledAt: scheduleIso || undefined,
+      });
       setFiles([]);
+      setScheduledAt("");
       await loadRows();
-      pushFlash("message", "Importación procesada correctamente.");
+      pushFlash(
+        "message",
+        scheduleIso
+          ? "Importación programada correctamente. Los candidatos no recibirán mensajes hasta la fecha indicada."
+          : "Importación procesada correctamente."
+      );
     } catch (error) {
       pushFlash("error", error.message || "No se pudo procesar la importación.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function handleSchedule() {
+    if (!scheduledAt) {
+      pushFlash("warning", "Indica la fecha y hora de envío.");
+      return;
+    }
+    const parsed = new Date(scheduledAt);
+    if (Number.isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+      pushFlash("warning", "La fecha programada debe ser futura.");
+      return;
+    }
+    handleSubmit(parsed.toISOString());
+  }
+
+  async function handleSendNow(jobId) {
+    try {
+      setSendingNowJobId(jobId);
+      await runScheduledCvImports(tenantId, jobId);
+      await loadRows();
+      pushFlash("message", "Envío lanzado: los candidatos del lote recibirán el mensaje ahora.");
+    } catch (error) {
+      pushFlash("error", error.message || "No se pudo lanzar el envío del lote programado.");
+    } finally {
+      setSendingNowJobId(null);
     }
   }
 
@@ -150,11 +225,63 @@ export default function CvImportsPage() {
 
       <section className="card">
         <div className="form-actions">
-          <button className="btn primary" type="button" disabled={submitting} onClick={handleSubmit}>
+          <button
+            className="btn primary"
+            type="button"
+            disabled={submitting}
+            onClick={() => handleSubmit(null)}
+          >
             {submitting ? "Procesando..." : "Procesar CVs"}
           </button>
+          <input
+            className="input"
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            disabled={submitting}
+            style={{ maxWidth: 240 }}
+            aria-label="Fecha y hora de envío programado"
+          />
+          <button
+            className="btn"
+            type="button"
+            disabled={submitting || !scheduledAt}
+            onClick={handleSchedule}
+          >
+            {submitting ? "Procesando..." : "Programar CVs"}
+          </button>
         </div>
+        <p className="muted" style={{ marginTop: 8 }}>
+          Con «Programar CVs» los candidatos no recibirán ningún mensaje hasta la
+          fecha y hora indicadas. La detección del teléfono sí se hace al momento,
+          para que puedas corregir los CVs sin número antes del envío.
+        </p>
       </section>
+
+      {scheduledJobs.map((job) => (
+        <section className="card" key={job.jobId}>
+          <div className="row-space">
+            <div>
+              <h2 className="h2">CVs programados</h2>
+              <p className="muted">
+                Lote a la espera de su fecha de envío. Envío programado:{" "}
+                <strong>{formatScheduledAt(job.scheduledAt)}</strong>
+              </p>
+            </div>
+            <div className="row">
+              <button
+                className="btn primary"
+                type="button"
+                disabled={sendingNowJobId !== null}
+                onClick={() => handleSendNow(job.jobId)}
+              >
+                {sendingNowJobId === job.jobId ? "Enviando..." : "Enviar ahora"}
+              </button>
+            </div>
+          </div>
+          <CvImportResultsTable rows={job.items} loading={loadingRows} onRetry={handleRetry} />
+        </section>
+      ))}
 
       <CvImportResultsTable rows={processedRows} loading={loadingRows} onRetry={handleRetry} />
 
