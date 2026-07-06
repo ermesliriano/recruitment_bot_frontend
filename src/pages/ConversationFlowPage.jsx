@@ -3,19 +3,31 @@ import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { getConversationFlow, updateConversationFlow } from "../lib/api";
 
-const DEFAULT_CONTRACT_PLACEHOLDER = `{
-  "intent": "provide_input | clarify | restart | passthrough",
-  "normalized_input": "string o null",
-  "reply": "string o null"
-}`;
+const INSTITUTIONAL_FIELDS = [
+  { key: "name", label: "Nombre de la empresa" },
+  { key: "description", label: "Descripción" },
+  { key: "industry", label: "Industria" },
+  { key: "location", label: "Ubicación" },
+  { key: "website", label: "Página web" },
+  { key: "instagram", label: "Instagram" },
+  { key: "facebook", label: "Facebook" },
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "email", label: "Email de contacto" },
+  { key: "phone", label: "Teléfono de contacto" },
+];
+
+const LONG_TEXT_FIELDS = new Set(["description"]);
 
 export default function ConversationFlowPage() {
   const { tenantId } = useAppContext();
 
   const [mode, setMode] = useState("classic");
-  const [prompt, setPrompt] = useState("");
+  const [guidePrompt, setGuidePrompt] = useState("");
+  const [personalityPrompt, setPersonalityPrompt] = useState("");
+  const [institutional, setInstitutional] = useState({});
   const [contractText, setContractText] = useState("");
   const [rewriteMessages, setRewriteMessages] = useState(true);
+  const [defaults, setDefaults] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -33,12 +45,23 @@ export default function ConversationFlowPage() {
         setSuccess("");
         const flow = await getConversationFlow(tenantId);
         if (ignore) return;
+
+        const flowDefaults = flow?.defaults || {};
+        setDefaults(flowDefaults);
         setMode(flow?.conversation_mode || "classic");
-        setPrompt(flow?.llm_flow_prompt || "");
+        // Se muestra siempre el texto EFECTIVO: el personalizado si existe,
+        // o el default del backend para poder editarlo/ampliarlo/recortarlo.
+        setGuidePrompt(flow?.llm_flow_prompt || flowDefaults.llm_flow_prompt || "");
+        setPersonalityPrompt(
+          flow?.llm_personality_prompt || flowDefaults.llm_personality_prompt || ""
+        );
+        setInstitutional(flow?.institutional_info || {});
         setContractText(
-          flow?.llm_flow_contract
-            ? JSON.stringify(flow.llm_flow_contract, null, 2)
-            : ""
+          JSON.stringify(
+            flow?.llm_flow_contract || flowDefaults.llm_flow_contract || {},
+            null,
+            2
+          )
         );
         setRewriteMessages(flow?.llm_rewrite_messages !== false);
       } catch (loadError) {
@@ -57,6 +80,19 @@ export default function ConversationFlowPage() {
       ignore = true;
     };
   }, [tenantId]);
+
+  function handleInstitutionalChange(key, value) {
+    setInstitutional((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleRestoreDefault(block) {
+    if (!defaults) return;
+    if (block === "guide") setGuidePrompt(defaults.llm_flow_prompt || "");
+    if (block === "personality")
+      setPersonalityPrompt(defaults.llm_personality_prompt || "");
+    if (block === "contract")
+      setContractText(JSON.stringify(defaults.llm_flow_contract || {}, null, 2));
+  }
 
   async function handleSave() {
     setError("");
@@ -78,10 +114,10 @@ export default function ConversationFlowPage() {
       }
     }
 
-    const trimmedPrompt = prompt.trim();
-    if (trimmedPrompt && !trimmedPrompt.includes("{contract}")) {
+    const trimmedGuide = guidePrompt.trim();
+    if (trimmedGuide && !trimmedGuide.includes("{contract}")) {
       setError(
-        "El prompt personalizado debe incluir el marcador {contract} donde se insertará el contrato JSON."
+        "El prompt del guía debe incluir el marcador {contract} donde se insertará el contrato JSON."
       );
       return;
     }
@@ -90,7 +126,9 @@ export default function ConversationFlowPage() {
       setSaving(true);
       const flow = await updateConversationFlow(tenantId, {
         conversation_mode: mode,
-        llm_flow_prompt: trimmedPrompt || null,
+        llm_flow_prompt: trimmedGuide || null,
+        llm_personality_prompt: personalityPrompt.trim() || null,
+        institutional_info: institutional,
         llm_flow_contract: contract,
         llm_rewrite_messages: rewriteMessages,
       });
@@ -111,8 +149,9 @@ export default function ConversationFlowPage() {
             <h1 className="h1">Flujo de conversación</h1>
             <p className="muted">
               Elige si los candidatos de este tenant conversan con el bot clásico
-              (máquina de estados) o con el flujo guiado por IA. Sección reservada a
-              los máximos administradores de Cesar IA.
+              (máquina de estados) o con el flujo guiado por IA, y personaliza sus
+              instrucciones. Sección reservada a los máximos administradores de
+              Cesar IA.
             </p>
           </div>
           <div className="row">
@@ -137,75 +176,36 @@ export default function ConversationFlowPage() {
       ) : null}
 
       {tenantId && !loading ? (
-        <section className="card">
-          <h2 className="h2">Modo de conversación</h2>
+        <>
+          <section className="card">
+            <h2 className="h2">Modo de conversación</h2>
 
-          <div className="field">
-            <label className="field-label">
-              <input
-                type="radio"
-                name="conversation_mode"
-                value="classic"
-                checked={mode === "classic"}
-                onChange={() => setMode("classic")}
-              />{" "}
-              Bot clásico — flujo determinista por máquina de estados (actual).
-            </label>
-            <label className="field-label">
-              <input
-                type="radio"
-                name="conversation_mode"
-                value="llm"
-                checked={mode === "llm"}
-                onChange={() => setMode("llm")}
-              />{" "}
-              Flujo IA — un LLM interpreta las respuestas del candidato, gestiona
-              respuestas equivocadas con naturalidad y redacta los mensajes. La
-              recolección de respuestas, la evaluación del CV y el scoring no cambian.
-            </label>
-          </div>
+            <div className="field">
+              <label className="field-label">
+                <input
+                  type="radio"
+                  name="conversation_mode"
+                  value="classic"
+                  checked={mode === "classic"}
+                  onChange={() => setMode("classic")}
+                />{" "}
+                Bot clásico — flujo determinista por máquina de estados.
+              </label>
+              <label className="field-label">
+                <input
+                  type="radio"
+                  name="conversation_mode"
+                  value="llm"
+                  checked={mode === "llm"}
+                  onChange={() => setMode("llm")}
+                />{" "}
+                Flujo IA — un LLM interpreta las respuestas del candidato, gestiona
+                respuestas equivocadas con naturalidad y redacta los mensajes. La
+                recolección de respuestas, la evaluación del CV y el scoring no cambian.
+              </label>
+            </div>
 
-          {mode === "llm" ? (
-            <>
-              <div className="field">
-                <label className="field-label" htmlFor="llm-flow-prompt">
-                  Prompt del guía conversacional (opcional)
-                </label>
-                <p className="muted">
-                  Si lo dejas vacío se usa el prompt por defecto. Si lo personalizas,
-                  debe incluir el marcador <code>{"{contract}"}</code>, que será
-                  sustituido por el contrato JSON de salida.
-                </p>
-                <textarea
-                  id="llm-flow-prompt"
-                  className="input"
-                  rows={12}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="(vacío = prompt por defecto)"
-                />
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="llm-flow-contract">
-                  Contrato JSON de salida (opcional)
-                </label>
-                <p className="muted">
-                  Estructura JSON que el LLM debe devolver en cada turno. Si lo dejas
-                  vacío se usa el contrato por defecto. El backend siempre espera los
-                  campos <code>intent</code>, <code>normalized_input</code> y{" "}
-                  <code>reply</code>.
-                </p>
-                <textarea
-                  id="llm-flow-contract"
-                  className="input"
-                  rows={7}
-                  value={contractText}
-                  onChange={(e) => setContractText(e.target.value)}
-                  placeholder={DEFAULT_CONTRACT_PLACEHOLDER}
-                />
-              </div>
-
+            {mode === "llm" ? (
               <div className="field">
                 <label className="field-label">
                   <input
@@ -213,25 +213,153 @@ export default function ConversationFlowPage() {
                     checked={rewriteMessages}
                     onChange={(e) => setRewriteMessages(e.target.checked)}
                   />{" "}
-                  Reescribir también los mensajes salientes del bot con tono natural
-                  (recomendado). Si se desactiva, el LLM solo interpreta las
-                  respuestas del candidato.
+                  Reescribir también los mensajes salientes del bot con la
+                  personalidad configurada (recomendado).
                 </label>
               </div>
+            ) : null}
+          </section>
+
+          {mode === "llm" ? (
+            <>
+              <section className="card">
+                <div className="row-space">
+                  <div>
+                    <h2 className="h2">Prompt del guía conversacional</h2>
+                    <p className="muted">
+                      Instrucciones técnicas de interpretación: cómo normalizar
+                      respuestas, cuándo aclarar y el contrato JSON. Debe incluir el
+                      marcador <code>{"{contract}"}</code>.
+                    </p>
+                  </div>
+                  <div className="row">
+                    <button
+                      className="btn small"
+                      type="button"
+                      onClick={() => handleRestoreDefault("guide")}
+                    >
+                      Restaurar por defecto
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="input"
+                  rows={16}
+                  value={guidePrompt}
+                  onChange={(e) => setGuidePrompt(e.target.value)}
+                />
+              </section>
+
+              <section className="card">
+                <div className="row-space">
+                  <div>
+                    <h2 className="h2">Prompt de la personalidad</h2>
+                    <p className="muted">
+                      Quién es la asistente y cómo se comporta con el candidato
+                      (tono, límites, estilo). Se aplica tanto al interpretar como
+                      al redactar los mensajes.
+                    </p>
+                  </div>
+                  <div className="row">
+                    <button
+                      className="btn small"
+                      type="button"
+                      onClick={() => handleRestoreDefault("personality")}
+                    >
+                      Restaurar por defecto
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="input"
+                  rows={14}
+                  value={personalityPrompt}
+                  onChange={(e) => setPersonalityPrompt(e.target.value)}
+                />
+              </section>
+
+              <section className="card">
+                <h2 className="h2">Información institucional (Tenant)</h2>
+                <p className="muted">
+                  Datos de la empresa que la asistente podrá usar para responder
+                  preguntas del candidato. Solo se utilizan los campos con valor;
+                  la asistente nunca inventará los que falten.
+                </p>
+                <div className="detail-grid">
+                  {INSTITUTIONAL_FIELDS.map((field) => (
+                    <div key={field.key} className="field">
+                      <label className="field-label" htmlFor={`inst-${field.key}`}>
+                        {field.label}
+                      </label>
+                      {LONG_TEXT_FIELDS.has(field.key) ? (
+                        <textarea
+                          id={`inst-${field.key}`}
+                          className="input"
+                          rows={3}
+                          value={institutional[field.key] || ""}
+                          onChange={(e) =>
+                            handleInstitutionalChange(field.key, e.target.value)
+                          }
+                        />
+                      ) : (
+                        <input
+                          id={`inst-${field.key}`}
+                          className="input"
+                          type="text"
+                          value={institutional[field.key] || ""}
+                          onChange={(e) =>
+                            handleInstitutionalChange(field.key, e.target.value)
+                          }
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="card">
+                <div className="row-space">
+                  <div>
+                    <h2 className="h2">Contrato JSON de salida</h2>
+                    <p className="muted">
+                      Estructura JSON que el LLM debe devolver en cada turno. El
+                      backend siempre espera los campos <code>intent</code>,{" "}
+                      <code>normalized_input</code> y <code>reply</code>.
+                    </p>
+                  </div>
+                  <div className="row">
+                    <button
+                      className="btn small"
+                      type="button"
+                      onClick={() => handleRestoreDefault("contract")}
+                    >
+                      Restaurar por defecto
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="input"
+                  rows={7}
+                  value={contractText}
+                  onChange={(e) => setContractText(e.target.value)}
+                />
+              </section>
             </>
           ) : null}
 
-          <div className="row">
-            <button
-              className="btn primary"
-              type="button"
-              disabled={saving}
-              onClick={handleSave}
-            >
-              {saving ? "Guardando..." : "Guardar configuración"}
-            </button>
-          </div>
-        </section>
+          <section className="card">
+            <div className="row">
+              <button
+                className="btn primary"
+                type="button"
+                disabled={saving}
+                onClick={handleSave}
+              >
+                {saving ? "Guardando..." : "Guardar configuración"}
+              </button>
+            </div>
+          </section>
+        </>
       ) : null}
     </>
   );
