@@ -354,6 +354,13 @@ export default function DashboardPage() {
             >
               Flujo de conversación
             </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate("/company-info")}
+            >
+              Datos de la empresa
+            </button>
           </div>
         </div>
 

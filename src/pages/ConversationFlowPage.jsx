@@ -3,28 +3,12 @@ import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { getConversationFlow, updateConversationFlow } from "../lib/api";
 
-const INSTITUTIONAL_FIELDS = [
-  { key: "name", label: "Nombre de la empresa" },
-  { key: "description", label: "Descripción" },
-  { key: "industry", label: "Industria" },
-  { key: "location", label: "Ubicación" },
-  { key: "website", label: "Página web" },
-  { key: "instagram", label: "Instagram" },
-  { key: "facebook", label: "Facebook" },
-  { key: "linkedin", label: "LinkedIn" },
-  { key: "email", label: "Email de contacto" },
-  { key: "phone", label: "Teléfono de contacto" },
-];
-
-const LONG_TEXT_FIELDS = new Set(["description"]);
-
 export default function ConversationFlowPage() {
   const { tenantId } = useAppContext();
 
   const [mode, setMode] = useState("classic");
   const [guidePrompt, setGuidePrompt] = useState("");
   const [personalityPrompt, setPersonalityPrompt] = useState("");
-  const [institutional, setInstitutional] = useState({});
   const [contractText, setContractText] = useState("");
   const [rewriteMessages, setRewriteMessages] = useState(true);
   const [defaults, setDefaults] = useState(null);
@@ -55,7 +39,6 @@ export default function ConversationFlowPage() {
         setPersonalityPrompt(
           flow?.llm_personality_prompt || flowDefaults.llm_personality_prompt || ""
         );
-        setInstitutional(flow?.institutional_info || {});
         setContractText(
           JSON.stringify(
             flow?.llm_flow_contract || flowDefaults.llm_flow_contract || {},
@@ -80,10 +63,6 @@ export default function ConversationFlowPage() {
       ignore = true;
     };
   }, [tenantId]);
-
-  function handleInstitutionalChange(key, value) {
-    setInstitutional((current) => ({ ...current, [key]: value }));
-  }
 
   function handleRestoreDefault(block) {
     if (!defaults) return;
@@ -128,7 +107,6 @@ export default function ConversationFlowPage() {
         conversation_mode: mode,
         llm_flow_prompt: trimmedGuide || null,
         llm_personality_prompt: personalityPrompt.trim() || null,
-        institutional_info: institutional,
         llm_flow_contract: contract,
         llm_rewrite_messages: rewriteMessages,
       });
@@ -148,7 +126,7 @@ export default function ConversationFlowPage() {
           <div>
             <h1 className="h1">Flujo de conversación</h1>
             <p className="muted">
-              Elige si los candidatos de este tenant conversan con el bot clásico
+              Elige si los candidatos de esta empresa conversan con el bot clásico
               (máquina de estados) o con el flujo guiado por IA, y personaliza sus
               instrucciones. Sección reservada a los máximos administradores de
               Cesar IA.
@@ -162,7 +140,7 @@ export default function ConversationFlowPage() {
 
       {!tenantId ? (
         <div className="warning-box">
-          Selecciona un tenant en el dashboard antes de configurar su flujo.
+          Selecciona una empresa en el dashboard antes de configurar su flujo.
         </div>
       ) : null}
 
@@ -276,45 +254,6 @@ export default function ConversationFlowPage() {
                   value={personalityPrompt}
                   onChange={(e) => setPersonalityPrompt(e.target.value)}
                 />
-              </section>
-
-              <section className="card">
-                <h2 className="h2">Información institucional (Tenant)</h2>
-                <p className="muted">
-                  Datos de la empresa que la asistente podrá usar para responder
-                  preguntas del candidato. Solo se utilizan los campos con valor;
-                  la asistente nunca inventará los que falten.
-                </p>
-                <div className="detail-grid">
-                  {INSTITUTIONAL_FIELDS.map((field) => (
-                    <div key={field.key} className="field">
-                      <label className="field-label" htmlFor={`inst-${field.key}`}>
-                        {field.label}
-                      </label>
-                      {LONG_TEXT_FIELDS.has(field.key) ? (
-                        <textarea
-                          id={`inst-${field.key}`}
-                          className="input"
-                          rows={3}
-                          value={institutional[field.key] || ""}
-                          onChange={(e) =>
-                            handleInstitutionalChange(field.key, e.target.value)
-                          }
-                        />
-                      ) : (
-                        <input
-                          id={`inst-${field.key}`}
-                          className="input"
-                          type="text"
-                          value={institutional[field.key] || ""}
-                          onChange={(e) =>
-                            handleInstitutionalChange(field.key, e.target.value)
-                          }
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
               </section>
 
               <section className="card">

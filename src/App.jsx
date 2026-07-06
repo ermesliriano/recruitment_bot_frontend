@@ -3,6 +3,7 @@ import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
+import CompanyInfoPage from "./pages/CompanyInfoPage";
 import ConversationFlowPage from "./pages/ConversationFlowPage";
 import CvImportsPage from "./pages/CvImportsPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -44,6 +45,7 @@ export default function App() {
               <Route path="/vacancies/:vacancyId/questions" element={<VacancyQuestionsPage />} />
               <Route path="/tenant-questions" element={<TenantQuestionsPage />} />
               <Route path="/conversation-flow" element={<ConversationFlowPage />} />
+              <Route path="/company-info" element={<CompanyInfoPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundRedirect />} />

@@ -605,3 +605,21 @@ export async function updateConversationFlow(tenantId, payload, options = {}) {
     { method: "PUT", body: payload, token: options.token }
   );
 }
+
+export async function getCompanyInfo(tenantId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/company-info`,
+    { method: "GET", token: options.token }
+  );
+}
+
+export async function updateCompanyInfo(tenantId, institutionalInfo, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/company-info`,
+    {
+      method: "PUT",
+      body: { institutional_info: institutionalInfo },
+      token: options.token,
+    }
+  );
+}
