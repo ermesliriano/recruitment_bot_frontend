@@ -524,6 +524,9 @@ export async function createCvImportJob(tenantId, vacancyId, files, options = {}
   if (options.scheduledAt) {
     formData.append("scheduled_at", options.scheduledAt);
   }
+  if (options.channel) {
+    formData.append("channel", options.channel);
+  }
   files.forEach((file) => formData.append("files", file));
 
   return apiFetch(
@@ -589,6 +592,17 @@ export async function resolveCvImportPhone(tenantId, jobId, itemId, phone, optio
   );
 }
 
+export async function resolveCvImportEmail(tenantId, jobId, itemId, email, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/cv-imports/${encodeURIComponent(String(jobId).trim())}/items/${encodeURIComponent(String(itemId).trim())}/resolve-email`,
+    {
+      method: "POST",
+      body: { email },
+      token: options.token,
+    }
+  );
+}
+
 // ── Flujo de conversación por tenant (bot clásico vs flujo LLM) ──────────
 // Solo máximos administradores (token de administrador).
 
@@ -618,7 +632,11 @@ export async function updateCompanyInfo(tenantId, institutionalInfo, options = {
     `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/company-info`,
     {
       method: "PUT",
-      body: { institutional_info: institutionalInfo },
+      body: {
+        institutional_info: institutionalInfo,
+        email_from: options.emailFrom ?? null,
+        email_from_name: options.emailFromName ?? null,
+      },
       token: options.token,
     }
   );

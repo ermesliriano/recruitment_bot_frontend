@@ -8,6 +8,7 @@ import { useAppContext } from "../context/AppContext";
 import {
   createCvImportJob,
   listCvImportJobs,
+  resolveCvImportEmail,
   resolveCvImportPhone,
   retryOutboundMessage,
   runScheduledCvImports,
@@ -15,7 +16,7 @@ import {
 
 // Estados de un ítem cuyo teléfono no pudo determinarse automáticamente.
 // Estos casos se muestran en un listado aparte para resolverlos manualmente.
-const PENDING_PHONE_STATUSES = ["phone_not_found", "ambiguous_phone"];
+const PENDING_PHONE_STATUSES = ["phone_not_found", "ambiguous_phone", "email_not_found"];
 
 function flattenJobsToRows(jobs) {
   const list = Array.isArray(jobs) ? jobs : [];
@@ -58,6 +59,7 @@ export default function CvImportsPage() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [sendingNowJobId, setSendingNowJobId] = useState(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [channel, setChannel] = useState("whatsapp");
 
   const loadRows = useCallback(async () => {
     if (!tenantId || !vacancyId) {
@@ -133,6 +135,7 @@ export default function CvImportsPage() {
       setSubmitting(true);
       await createCvImportJob(tenantId, vacancyId, files, {
         scheduledAt: scheduleIso || undefined,
+        channel,
       });
       setFiles([]);
       setScheduledAt("");
@@ -205,18 +208,28 @@ export default function CvImportsPage() {
     }
   }
 
-  async function handleResolvePhone(row, phone) {
-    if (!row?._jobId || !phone) return;
+  async function handleResolvePhone(row, value) {
+    if (!row?._jobId || !value) return;
+    const isEmail = row.status === "email_not_found";
 
     try {
       setResolvingId(row.id);
-      await resolveCvImportPhone(tenantId, row._jobId, row.id, phone);
+      if (isEmail) {
+        await resolveCvImportEmail(tenantId, row._jobId, row.id, value);
+      } else {
+        await resolveCvImportPhone(tenantId, row._jobId, row.id, value);
+      }
       // Recargamos el histórico para que el ítem reprocesado salte del listado
       // de pendientes a la tabla de CVs importados con su estado actualizado.
       await loadRows();
-      pushFlash("message", "CV reprocesado con el teléfono indicado.");
+      pushFlash(
+        "message",
+        isEmail
+          ? "CV reprocesado con el email indicado."
+          : "CV reprocesado con el teléfono indicado."
+      );
     } catch (error) {
-      pushFlash("error", error.message || "No se pudo reprocesar el CV con ese teléfono.");
+      pushFlash("error", error.message || "No se pudo reprocesar el CV con ese dato.");
     } finally {
       setResolvingId(null);
     }
@@ -227,7 +240,8 @@ export default function CvImportsPage() {
       <section className="card">
         <h1 className="h1">Carga manual de CVs</h1>
         <p className="muted">
-          Sube uno o varios CVs para crear o reanudar candidaturas y lanzar el flujo seeded por WhatsApp.
+          Sube uno o varios CVs para crear o reanudar candidaturas y contactar a los
+          candidatos por el canal que elijas.
         </p>
       </section>
 
@@ -237,6 +251,36 @@ export default function CvImportsPage() {
       />
 
       <CvUploadPanel files={files} onFilesChange={setFiles} disabled={submitting} />
+
+      <section className="card">
+        <h2 className="h2">Canal de contacto</h2>
+        <div className="field">
+          <label className="field-label">
+            <input
+              type="radio"
+              name="cv-import-channel"
+              value="whatsapp"
+              checked={channel === "whatsapp"}
+              onChange={() => setChannel("whatsapp")}
+              disabled={submitting}
+            />{" "}
+            WhatsApp — plantilla inicial y flujo conversacional pregunta a pregunta.
+          </label>
+          <label className="field-label">
+            <input
+              type="radio"
+              name="cv-import-channel"
+              value="email"
+              checked={channel === "email"}
+              onChange={() => setChannel("email")}
+              disabled={submitting}
+            />{" "}
+            Email — un correo con las preguntas de la vacante agrupadas. Requiere
+            que el CV contenga una dirección de email (si no, podrás introducirla
+            manualmente).
+          </label>
+        </div>
+      </section>
 
       <section className="card">
         <div className="form-actions">

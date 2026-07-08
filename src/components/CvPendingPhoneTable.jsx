@@ -17,10 +17,10 @@ export default function CvPendingPhoneTable({ rows, onResolve, busyId = null }) 
     <section className="card">
       <div className="row-space">
         <div>
-          <h2 className="h2">Pendientes por teléfono</h2>
+          <h2 className="h2">Pendientes por datos de contacto</h2>
           <p className="muted">
-            CVs en los que no se pudo determinar el teléfono automáticamente.
-            Introduce el número manualmente y reintenta el procesado; al
+            CVs en los que no se pudo determinar automáticamente el teléfono o el
+            email. Introduce el dato manualmente y reintenta el procesado; al
             resolverse pasarán a la tabla de CVs importados.
           </p>
         </div>
@@ -38,7 +38,7 @@ export default function CvPendingPhoneTable({ rows, onResolve, busyId = null }) 
             <tr>
               <th>Fichero</th>
               <th>Motivo</th>
-              <th>Teléfono manual</th>
+              <th>Dato manual</th>
               <th>Acción</th>
             </tr>
           </thead>
@@ -46,6 +46,7 @@ export default function CvPendingPhoneTable({ rows, onResolve, busyId = null }) 
             {items.map((row) => {
               const value = phones[row.id] ?? "";
               const busy = busyId === row.id;
+              const isEmail = row.status === "email_not_found";
               const candidates = Array.isArray(row?.phone_candidates_json?.candidates)
                 ? row.phone_candidates_json.candidates
                     .map((candidate) => candidate?.e164)
@@ -64,13 +65,13 @@ export default function CvPendingPhoneTable({ rows, onResolve, busyId = null }) 
                   <td>
                     <input
                       className="input"
-                      type="tel"
-                      placeholder="+18495555555"
+                      type={isEmail ? "email" : "tel"}
+                      placeholder={isEmail ? "candidato@dominio.com" : "+18495555555"}
                       value={value}
                       disabled={busy}
                       onChange={(event) => setPhone(row.id, event.target.value)}
                     />
-                    {candidates.length > 0 ? (
+                    {!isEmail && candidates.length > 0 ? (
                       <div className="help-text">
                         Detectados en el CV: {candidates.join(", ")}
                       </div>

@@ -22,6 +22,8 @@ export default function CompanyInfoPage() {
   const { tenantId } = useAppContext();
 
   const [info, setInfo] = useState({});
+  const [emailFrom, setEmailFrom] = useState("");
+  const [emailFromName, setEmailFromName] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +41,8 @@ export default function CompanyInfoPage() {
         const data = await getCompanyInfo(tenantId);
         if (!ignore) {
           setInfo(data?.institutional_info || {});
+          setEmailFrom(data?.email_from || "");
+          setEmailFromName(data?.email_from_name || "");
         }
       } catch (loadError) {
         if (!ignore) {
@@ -66,8 +70,13 @@ export default function CompanyInfoPage() {
     setSuccess("");
     try {
       setSaving(true);
-      const data = await updateCompanyInfo(tenantId, info);
+      const data = await updateCompanyInfo(tenantId, info, {
+        emailFrom: emailFrom.trim() || null,
+        emailFromName: emailFromName.trim() || null,
+      });
       setInfo(data?.institutional_info || {});
+      setEmailFrom(data?.email_from || "");
+      setEmailFromName(data?.email_from_name || "");
       setSuccess("Información de la empresa guardada correctamente.");
     } catch (saveError) {
       setError(saveError.message || "No se pudo guardar la información.");
@@ -139,6 +148,55 @@ export default function CompanyInfoPage() {
             ))}
           </div>
 
+          <div className="row" style={{ marginTop: 8 }}>
+            <button
+              className="btn primary"
+              type="button"
+              disabled={saving}
+              onClick={handleSave}
+            >
+              {saving ? "Guardando..." : "Guardar datos"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {tenantId && !loading ? (
+        <section className="card">
+          <h2 className="h2">Canal de email</h2>
+          <p className="muted">
+            Correo remitente con el que el sistema contactará a los candidatos por
+            email. Debe estar verificado en la plataforma de envío; si se deja
+            vacío, se usa el remitente por defecto del servicio.
+          </p>
+          <div className="detail-grid">
+            <div className="field">
+              <label className="field-label" htmlFor="email-from">
+                Correo remitente
+              </label>
+              <input
+                id="email-from"
+                className="input"
+                type="email"
+                placeholder="reclutamiento@suempresa.com"
+                value={emailFrom}
+                onChange={(e) => setEmailFrom(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="email-from-name">
+                Nombre visible del remitente
+              </label>
+              <input
+                id="email-from-name"
+                className="input"
+                type="text"
+                placeholder="Empresa X - Reclutamiento"
+                value={emailFromName}
+                onChange={(e) => setEmailFromName(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="row" style={{ marginTop: 8 }}>
             <button
               className="btn primary"

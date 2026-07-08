@@ -5,6 +5,7 @@ const LABELS = {
   blocked_no_opt_in: "Bloqueado sin opt-in",
   phone_not_found: "Teléfono no encontrado",
   ambiguous_phone: "Teléfono ambiguo",
+  email_not_found: "Email no encontrado",
   scheduled: "Programado",
   failed: "Fallido",
 };
