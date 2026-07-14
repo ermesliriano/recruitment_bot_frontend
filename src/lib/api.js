@@ -669,3 +669,20 @@ export async function getConversationMessages(
     { method: "GET", query, token: options.token }
   );
 }
+
+export async function sendConversationMessage(
+  tenantId,
+  platform,
+  chatId,
+  text,
+  options = {}
+) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/conversations/messages`,
+    {
+      method: "POST",
+      body: { platform, chat_id: chatId, text },
+      token: options.token,
+    }
+  );
+}

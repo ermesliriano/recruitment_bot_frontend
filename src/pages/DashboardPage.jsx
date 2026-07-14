@@ -361,6 +361,13 @@ export default function DashboardPage() {
             >
               Datos de la empresa
             </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate("/conversations")}
+            >
+              Conversaciones
+            </button>
           </div>
         </div>
 

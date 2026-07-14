@@ -5,6 +5,7 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
 import CompanyInfoPage from "./pages/CompanyInfoPage";
 import ConversationFlowPage from "./pages/ConversationFlowPage";
+import ConversationsPage from "./pages/ConversationsPage";
 import CvImportsPage from "./pages/CvImportsPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/tenant-questions" element={<TenantQuestionsPage />} />
               <Route path="/conversation-flow" element={<ConversationFlowPage />} />
               <Route path="/company-info" element={<CompanyInfoPage />} />
+              <Route path="/conversations" element={<ConversationsPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundRedirect />} />
