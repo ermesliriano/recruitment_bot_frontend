@@ -641,3 +641,31 @@ export async function updateCompanyInfo(tenantId, institutionalInfo, options = {
     }
   );
 }
+
+// ── Conversaciones con candidatos (transcripción) ────────────────────
+
+export async function getConversations(tenantId, options = {}) {
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/conversations`,
+    { method: "GET", token: options.token }
+  );
+}
+
+export async function getConversationMessages(
+  tenantId,
+  platform,
+  chatId,
+  options = {}
+) {
+  const query = {
+    platform,
+    chat_id: chatId,
+  };
+  if (options.limit) query.limit = options.limit;
+  if (options.before) query.before = options.before;
+
+  return apiFetch(
+    `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/conversations/messages`,
+    { method: "GET", query, token: options.token }
+  );
+}
