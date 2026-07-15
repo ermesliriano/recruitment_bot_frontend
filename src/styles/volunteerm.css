@@ -1,43 +1,69 @@
 :root {
-  /* === CESAR IA BOT SUITE — Paleta de marca === */
-  --primary-dark: #1F222B;      /* Fondo oscuro principal (cromo: topbar/nav) */
-  --secondary-dark: #2B2F38;    /* Variación oscura */
-  --primary-gold: #E8B15A;      /* Dorado principal (acento de marca) */
-  --secondary-gold: #D89B3F;    /* Dorado intenso (hover / activo) */
-  --light-bg: #E9E9E9;          /* Gris claro del fondo */
-  --pure-white: #F8F8F8;        /* Blanco suave (tarjetas) */
-  --text-dark: #1D1F26;         /* Texto oscuro */
-  --text-light: #FFFFFF;        /* Texto claro */
-  --accent-gray: #8A8F98;       /* Gris de apoyo (bordes / cromo) */
+  /* === CESAR IA Suite — Paleta oficial ===
+     Fuente: identidad visual de cesaria.net / CESAR IA Suite. */
+  --graphite: #262729;          /* --primary oficial (grafito) */
+  --graphite-hover: #1B1C1E;    /* --primary-hover oficial */
+  --graphite-soft: #323438;     /* --primary-soft oficial */
+
+  --accent: #F8AF4B;            /* Naranja/dorado de marca (solo CTA/activos) */
+  --accent-hover: #E79B32;
+  --accent-soft: #FFF2DE;
+
+  --background: #F4F4F2;
+  --surface: #FFFFFF;
+  --surface-muted: #FAFAF9;
+  --border: #E3E3E0;
+
+  --text-primary: #262729;
+  --text-secondary: #6B7280;
+  --text-inverse: #FFFFFF;
+
+  --success: #1F8F5F;
+  --success-bg: #EAF7F1;
+  --success-border: #1F8F5F;
+  --warning: #F8AF4B;
+  --warning-bg: #FFF2DE;
+  --warning-border: #E79B32;
+  --error: #E5484D;
+  --error-bg: #FDECEC;
+  --error-border: #E5484D;
+  --info: #2563EB;
+  --info-bg: #EAF2FF;
+
+  /* === Alias de compatibilidad (tokens antiguos → paleta oficial) ===
+     Permiten re-skinear todo el CSS existente sin tocar cada regla. */
+  --primary-dark: var(--graphite);
+  --secondary-dark: var(--graphite-soft);
+  --primary-gold: var(--accent);
+  --secondary-gold: var(--accent-hover);
+  --light-bg: var(--background);
+  --pure-white: var(--surface);
+  --text-dark: var(--text-primary);
+  --text-light: var(--text-inverse);
+  --accent-gray: var(--text-secondary);
   --cesar-gradient: linear-gradient(
     90deg,
-    #1F222B 0%,
-    #2B2F38 50%,
-    #1F222B 100%
+    #262729 0%,
+    #323438 50%,
+    #262729 100%
   );
 
-  /* === Tokens semánticos (mapeados sobre la marca) ===
-     Cambia SOLO estas líneas para virar el tema. Para un tema 100% oscuro,
-     pon --bg en var(--primary-dark), --card en var(--secondary-dark) y
-     --text en var(--text-light). */
-  --bg: var(--light-bg);
-  --card: var(--pure-white);
-  --text: var(--text-dark);
-  --muted: #667085;             /* texto secundario legible sobre claro */
-  --line: #d6d8dc;
-  --primary: var(--primary-gold);
-  --primary-strong: var(--secondary-gold);  /* sustituye al antiguo azul --primary-dark */
-  --on-primary: #1F222B;        /* texto sobre dorado: oscuro, por contraste */
+  /* === Tokens semánticos (los consume todo el stylesheet) ===
+     Nota: --primary semántico = color de CTA. La spec reserva el naranja para
+     CTAs y estados activos, por eso apunta a --accent (el grafito oficial vive
+     en --graphite). */
+  --bg: var(--background);
+  --card: var(--surface);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --line: var(--border);
+  --primary: var(--accent);
+  --primary-strong: var(--accent-hover);
+  --on-primary: #262729;        /* texto sobre naranja: grafito, contraste AA */
 
-  /* Estados funcionales (se mantienen sus colores semánticos) */
-  --danger: #dc2626;
-  --warning-bg: #fffbeb;
-  --warning-border: #fbbf24;
-  --error-bg: #fef2f2;
-  --error-border: #fca5a5;
-  --success-bg: #ecfdf3;
-  --success-border: #86efac;
-  --shadow: 0 12px 28px rgba(31, 34, 43, 0.12);
+  /* Estados funcionales */
+  --danger: var(--error);
+  --shadow: 0 8px 24px rgba(38, 39, 41, 0.08);
 }
 
 * {
@@ -475,6 +501,385 @@ select.input:focus {
   display: block;
   font-weight: 600;
   margin-bottom: 6px;
+}
+
+/* ── CESAR IA Suite — AppShell con sidebar (Fase 1 rediseno) ───────── */
+
+.suite-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.suite-sidebar {
+  width: 248px;
+  flex: 0 0 auto;
+  background: var(--graphite);
+  color: var(--text-inverse);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 40;
+}
+
+.suite-brand {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.suite-brand-parent {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 10px;
+}
+
+.suite-brand-module {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.suite-brand-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.suite-brand-descriptor {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.suite-sidebar-cta {
+  padding: 14px 16px 4px;
+}
+
+.suite-sidebar-cta .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.suite-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.suite-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.suite-nav-link:hover {
+  background: var(--graphite-soft);
+  color: var(--text-inverse);
+}
+
+.suite-nav-link.active {
+  background: var(--graphite-soft);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 700;
+}
+
+.suite-nav-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.suite-sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suite-sidebar-footer .linklike {
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-weight: 600;
+}
+
+.suite-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.suite-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 22px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.suite-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.suite-header-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suite-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.suite-hamburger {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.suite-content {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.suite-overlay {
+  display: none;
+}
+
+/* Avatar de Maria */
+.maria-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--graphite);
+  font-weight: 800;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.maria-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Cabecera de pagina con Maria */
+.page-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.page-hero .h1 {
+  margin: 0;
+}
+
+/* KPI cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpi-value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.kpi-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Vacante activa destacada */
+.active-vacancy-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.active-vacancy-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.active-vacancy-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 4px 0 10px;
+}
+
+.active-vacancy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+.active-vacancy-meta strong {
+  color: var(--text-primary);
+}
+
+/* Accesos rapidos */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quick-action {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quick-action:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.quick-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.quick-action-title {
+  font-weight: 700;
+}
+
+.quick-action-hint {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* Responsive del shell */
+@media (max-width: 1024px) {
+  .kpi-grid,
+  .quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .suite-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    width: 264px;
+  }
+
+  .suite-shell.sidebar-open .suite-sidebar {
+    transform: translateX(0);
+  }
+
+  .suite-shell.sidebar-open .suite-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(38, 39, 41, 0.45);
+    z-index: 35;
+    border: none;
+  }
+
+  .suite-hamburger {
+    display: inline-flex;
+  }
+
+  .suite-content {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .kpi-grid,
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Vista de conversaciones (layout tipo WhatsApp) ─────────────── */

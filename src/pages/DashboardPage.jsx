@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import VacancyBudgetModal from "../components/VacancyBudgetModal";
 import VacancyActionsModal from "../components/VacancyActionsModal";
-import StatCard from "../components/StatCard";
+import KpiCard from "../components/KpiCard";
+import MariaAvatar from "../components/MariaAvatar";
 import Table from "../components/Table";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
@@ -85,6 +86,16 @@ export default function DashboardPage() {
   // en VacancyOut.tenant_name); si aún no ha cargado, caemos al id como respaldo.
   const tenantName = useMemo(
     () => vacancies.find((item) => item.tenant_name)?.tenant_name || "",
+    [vacancies]
+  );
+
+  const activeVacanciesCount = useMemo(
+    () => vacancies.filter((v) => v.status?.toLowerCase() === "active").length,
+    [vacancies]
+  );
+
+  const totalApplications = useMemo(
+    () => vacancies.reduce((sum, v) => sum + (Number(v.applications_count) || 0), 0),
     [vacancies]
   );
 
@@ -260,10 +271,15 @@ export default function DashboardPage() {
       ) : null}
 		
       <section className="card">
-        <h1 className="h1">Dashboard</h1>
-        <p className="muted">
-          Resumen general del estado del sistema: vacantes activas, candidaturas evaluadas y acceso rápido a las operaciones principales.
-        </p>
+        <div className="page-hero">
+          <MariaAvatar size={52} />
+          <div>
+            <h1 className="h1">Dashboard de Reclutamiento</h1>
+            <p className="muted" style={{ margin: 0 }}>
+              Gestiona vacantes, candidatos, evaluaciones y conversaciones desde un solo lugar.
+            </p>
+          </div>
+        </div>
       </section>
 
       <VacancySelector
@@ -272,50 +288,93 @@ export default function DashboardPage() {
         onLoaded={setVacancies}
       />
 
-      <section className="grid grid-stats">
-        <StatCard
-          title="Vacantes de la Empresa"
+      <section className="kpi-grid">
+        <KpiCard
+          label="Vacantes activas"
+          value={activeVacanciesCount}
+          hint={tenantName ? `Empresa ${tenantName}` : "Selecciona una empresa"}
+        />
+        <KpiCard
+          label="Vacantes totales"
           value={vacancies.length}
-          description={
-            tenantId
-              ? `Usuario activo de la empresa ${tenantName || tenantId}`
-              : "Selecciona un tenant para visualizar sus vacantes."
-          }
-          actionLabel="Crear vacante"
-          actionTo="/vacancies/new"
-          actionVariant="primary"
+          hint="Incluye borradores y archivadas"
         />
-
-        <StatCard
-          title="Vacante activa"
-          value={selectedVacancy?.title || (vacancyId ? vacancyId : "Sin seleccionar")}
-          description={
-            selectedVacancy
-              ? `Código: ${selectedVacancy.code}`
-              : "Selecciona una vacante para activar el ranking y el detalle de candidaturas."
-          }
-          actionLabel={vacancyId ? "Abrir ranking" : "Selecciona vacante"}
-          actionTo={vacancyId ? `/ranking?vacancyId=${vacancyId}` : undefined}
-          disabled={!vacancyId}
+        <KpiCard
+          label="Candidaturas recibidas"
+          value={totalApplications}
+          hint="Suma de todas las vacantes"
         />
-
-        <StatCard
-          title="Candidaturas evaluadas"
+        <KpiCard
+          label="Evaluadas (vacante activa)"
           value={rankingLoading ? "…" : rankingTotal ?? "—"}
-          description="Número de candidaturas evaluadas para la vacante seleccionada."
-          actionLabel={vacancyId ? "Ver ranking" : "Sin vacante activa"}
-          actionTo={vacancyId ? `/ranking?vacancyId=${vacancyId}` : undefined}
-          disabled={!vacancyId}
+          hint={vacancyId ? "Con puntuación final" : "Sin vacante seleccionada"}
         />
+      </section>
 
-        <StatCard
-          title="Carga manual de CVs"
-          value="Importar CVs"
-          description="Sube uno o varios CVs y dispara el flujo outbound por WhatsApp."
-          actionLabel="Ir a carga"
-          onAction={() => navigate("/cv-imports")}
-        />
+      {selectedVacancy ? (
+        <section className="active-vacancy-card">
+          <span className="active-vacancy-label">Vacante activa</span>
+          <div className="active-vacancy-title">{selectedVacancy.title}</div>
+          <div className="active-vacancy-meta">
+            <span>Código: <strong>{selectedVacancy.code || "—"}</strong></span>
+            <span>
+              Estado:{" "}
+              <span className={`status-badge ${selectedVacancy.status?.toLowerCase()}`}>
+                {selectedVacancy.status?.toLowerCase()}
+              </span>
+            </span>
+            <span>Candidaturas: <strong>{selectedVacancy.applications_count ?? 0}</strong></span>
+            <span>Creada: <strong>{formatVacancyDate(selectedVacancy.created_at)}</strong></span>
+          </div>
+          <div className="row">
+            <button
+              className="btn primary"
+              type="button"
+              onClick={() => navigate(`/ranking?vacancyId=${selectedVacancy.id}`)}
+            >
+              Ver ranking
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => navigate(`/vacancies/${selectedVacancy.id}/edit`)}
+            >
+              Gestionar vacante
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="active-vacancy-card">
+          <span className="active-vacancy-label">Vacante activa</span>
+          <div className="active-vacancy-title">Sin vacante seleccionada</div>
+          <p className="muted" style={{ margin: 0 }}>
+            Selecciona una vacante en el selector superior para ver su resumen,
+            abrir su ranking y gestionarla desde aquí.
+          </p>
+        </section>
+      )}
 
+      <section className="quick-actions" aria-label="Accesos rápidos">
+        <button className="quick-action" type="button" onClick={() => navigate("/vacancies/new")}>
+          <span className="quick-action-title">Crear vacante</span>
+          <span className="quick-action-hint">Publica un nuevo proceso</span>
+        </button>
+        <button className="quick-action" type="button" onClick={() => navigate("/cv-imports")}>
+          <span className="quick-action-title">Importar CV</span>
+          <span className="quick-action-hint">Carga candidatos y contacta</span>
+        </button>
+        <button
+          className="quick-action"
+          type="button"
+          onClick={() => navigate(vacancyId ? `/ranking?vacancyId=${vacancyId}` : "/ranking")}
+        >
+          <span className="quick-action-title">Ver ranking</span>
+          <span className="quick-action-hint">Candidatos evaluados</span>
+        </button>
+        <button className="quick-action" type="button" onClick={() => navigate("/tenant-questions")}>
+          <span className="quick-action-title">Configurar preguntas</span>
+          <span className="quick-action-hint">Screening y evaluación</span>
+        </button>
       </section>
 
       {rankingError ? (
@@ -329,7 +388,8 @@ export default function DashboardPage() {
           <div>
             <h2 className="h2">Vacantes de la empresa</h2>
             <p className="muted">
-              Listado de vacantes de la empresa con acceso directo al ranking, preguntas y configuración.
+              Listado de vacantes de la empresa. Pulsa el título de una vacante para
+              ver sus acciones (ranking, preguntas, edición y estado).
             </p>
           </div>
           <div className="row">
@@ -340,34 +400,6 @@ export default function DashboardPage() {
             >
               Crear vacante
             </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => navigate("/tenant-questions")}
-            >
-              Preguntas genéricas
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => navigate("/conversation-flow")}
-            >
-              Flujo de conversación
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => navigate("/company-info")}
-            >
-              Datos de la empresa
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => navigate("/conversations")}
-            >
-              Conversaciones
-            </button>
           </div>
         </div>
 
@@ -376,8 +408,8 @@ export default function DashboardPage() {
           rows={vacancies}
           emptyText={
             tenantId
-              ? "No hay vacantes registradas para este tenant."
-              : "Selecciona un tenant para consultar sus vacantes."
+              ? "No hay vacantes registradas todavía. Crea la primera con el botón “Crear vacante”."
+              : "Selecciona una empresa para consultar sus vacantes."
           }
         />
       </section>
