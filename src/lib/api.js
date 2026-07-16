@@ -645,9 +645,12 @@ export async function updateCompanyInfo(tenantId, institutionalInfo, options = {
 // ── Conversaciones con candidatos (transcripción) ────────────────────
 
 export async function getConversations(tenantId, options = {}) {
+  const query = {};
+  if (options.vacancyId) query.vacancy_id = options.vacancyId;
+
   return apiFetch(
     `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/conversations`,
-    { method: "GET", token: options.token }
+    { method: "GET", query, token: options.token }
   );
 }
 

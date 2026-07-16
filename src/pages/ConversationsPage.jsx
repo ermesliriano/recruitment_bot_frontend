@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
 import {
   getConversationMessages,
@@ -49,7 +50,7 @@ function threadKey(thread) {
 }
 
 export default function ConversationsPage() {
-  const { tenantId } = useAppContext();
+  const { tenantId, vacancyId } = useAppContext();
 
   const [threads, setThreads] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -65,17 +66,20 @@ export default function ConversationsPage() {
   selectedRef.current = selected;
 
   const loadThreads = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !vacancyId) {
+      setThreads([]);
+      return;
+    }
     try {
       setLoadingThreads(true);
-      const data = await getConversations(tenantId);
+      const data = await getConversations(tenantId, { vacancyId });
       setThreads(Array.isArray(data?.items) ? data.items : []);
     } catch (loadError) {
       setError(loadError.message || "No se pudieron cargar las conversaciones.");
     } finally {
       setLoadingThreads(false);
     }
-  }, [tenantId]);
+  }, [tenantId, vacancyId]);
 
   const loadMessages = useCallback(
     async (thread, { silent = false } = {}) => {
@@ -106,13 +110,19 @@ export default function ConversationsPage() {
     [tenantId]
   );
 
+  // Al cambiar de vacante, cierra el hilo abierto (pertenece a otro filtro).
+  useEffect(() => {
+    setSelected(null);
+    setMessages([]);
+  }, [vacancyId]);
+
   useEffect(() => {
     loadThreads();
   }, [loadThreads]);
 
   // Auto-refresco suave del hilo abierto y del listado.
   useEffect(() => {
-    if (!tenantId) return undefined;
+    if (!tenantId || !vacancyId) return undefined;
     const interval = setInterval(() => {
       loadThreads();
       if (selectedRef.current) {
@@ -165,8 +175,9 @@ export default function ConversationsPage() {
           <div>
             <h1 className="h1">Conversaciones</h1>
             <p className="muted">
-              Conversaciones del asistente con los candidatos. Selecciona un
-              candidato para ver el historial y escribirle directamente.
+              Conversaciones del asistente con los candidatos de la vacante
+              seleccionada. Elige un candidato para ver el historial y escribirle
+              directamente.
             </p>
           </div>
           <div className="row">
@@ -181,9 +192,20 @@ export default function ConversationsPage() {
         </div>
       ) : null}
 
+      <VacancySelector
+        title="Vacante"
+        description="Las conversaciones mostradas corresponden a los candidatos que han aplicado a esta vacante."
+      />
+
+      {tenantId && !vacancyId ? (
+        <div className="warning-box">
+          Selecciona una vacante para ver las conversaciones de sus candidatos.
+        </div>
+      ) : null}
+
       {error ? <div className="error-box">{error}</div> : null}
 
-      {tenantId ? (
+      {tenantId && vacancyId ? (
         <section className="card chat-shell">
           <aside className="chat-sidebar">
             <div className="chat-sidebar-header">
@@ -199,7 +221,9 @@ export default function ConversationsPage() {
             </div>
             <div className="chat-thread-list">
               {threads.length === 0 && !loadingThreads ? (
-                <p className="muted chat-empty">Aún no hay conversaciones registradas.</p>
+                <p className="muted chat-empty">
+                  No hay conversaciones de candidatos para esta vacante todavía.
+                </p>
               ) : null}
               {threads.map((thread) => {
                 const isActive = selected && threadKey(selected) === threadKey(thread);
