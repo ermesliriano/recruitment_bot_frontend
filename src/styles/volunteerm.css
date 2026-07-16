@@ -1002,6 +1002,263 @@ select.input:focus {
   }
 }
 
+/* ── Ranking de candidaturas ────────────────────────────── */
+
+/* Combobox de vacantes */
+.combobox {
+  position: relative;
+}
+
+.combobox-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.combobox-input-wrap .input {
+  padding-right: 34px;
+}
+
+.combobox-clear {
+  position: absolute;
+  right: 8px;
+  border: none;
+  background: none;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.combobox-clear:hover {
+  color: var(--error);
+}
+
+.combobox-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.combobox-option {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.combobox-option:last-child {
+  border-bottom: none;
+}
+
+.combobox-option:hover,
+.combobox-option.highlight {
+  background: var(--accent-soft);
+}
+
+.combobox-option-title {
+  font-weight: 600;
+}
+
+.combobox-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.combobox-empty {
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Barra de filtros */
+.filters-bar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.filters-bar .label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 1024px) {
+  .filters-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .filters-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Tabla de ranking */
+.rank-table-wrap {
+  overflow-x: auto;
+}
+
+.rank-table-wrap table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 5;
+}
+
+.cell-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cell-center {
+  text-align: center;
+}
+
+.cell-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.score-total-cell {
+  min-width: 120px;
+}
+
+.score-total-number {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.score-total-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.score-total-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.affinity-high .score-total-fill { background: var(--success); }
+.affinity-mid .score-total-fill { background: var(--info); }
+.affinity-low .score-total-fill { background: var(--accent-hover); }
+
+.affinity-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 3px;
+  display: inline-block;
+}
+
+.affinity-high .affinity-label { color: var(--success); }
+.affinity-mid .affinity-label { color: var(--info); }
+.affinity-low .affinity-label { color: #92400e; }
+
+/* Badges de estado en español */
+.state-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.state-badge.shortlist { background: var(--success-bg); color: var(--success); }
+.state-badge.interview { background: var(--info-bg); color: var(--info); }
+.state-badge.review { background: var(--warning-bg); color: #92400e; }
+.state-badge.reject { background: var(--error-bg); color: var(--error); }
+.state-badge.pending { background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); }
+
+/* Sección de candidaturas pendientes */
+.pending-section {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+}
+
+.pending-section .q-badge.stage {
+  background: var(--surface);
+  border: 1px solid var(--warning-border);
+  color: #92400e;
+  font-size: 0.78rem;
+}
+
+/* Cards móviles del ranking */
+.rank-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .rank-table-wrap {
+    display: none;
+  }
+
+  .rank-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rank-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--surface);
+  }
+
+  .pending-section .rank-card {
+    border-color: var(--warning-border);
+  }
+
+  .rank-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .rank-card details summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-top: 8px;
+  }
+
+  .rank-card-detail {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.88rem;
+  }
+}
+
 /* ── CESAR IA Suite — AppShell con sidebar (Fase 1 rediseno) ───────── */
 
 .suite-shell {
