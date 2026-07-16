@@ -14,7 +14,26 @@ import Topbar from "./Topbar";
 export default function AppShell() {
   const { flashes, removeFlash, isAuthenticated } = useAppContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("suiteSidebarCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
   const location = useLocation();
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem("suiteSidebarCollapsed", next ? "1" : "0");
+      } catch {
+        // localStorage no disponible: el estado vive solo en memoria.
+      }
+      return next;
+    });
+  }
 
   // Cierra el menú móvil al navegar y con la tecla Escape (accesibilidad).
   useEffect(() => {
@@ -43,8 +62,16 @@ export default function AppShell() {
   }
 
   return (
-    <div className={`suite-shell${sidebarOpen ? " sidebar-open" : ""}`}>
-      <Sidebar onNavigate={() => setSidebarOpen(false)} />
+    <div
+      className={`suite-shell${sidebarOpen ? " sidebar-open" : ""}${
+        sidebarCollapsed ? " sidebar-collapsed" : ""
+      }`}
+    >
+      <Sidebar
+        onNavigate={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapsed}
+      />
 
       {sidebarOpen ? (
         <button

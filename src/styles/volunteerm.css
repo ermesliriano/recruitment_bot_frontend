@@ -522,6 +522,7 @@ select.input:focus {
   top: 0;
   height: 100vh;
   z-index: 40;
+  transition: width 0.18s ease;
 }
 
 .suite-brand {
@@ -605,6 +606,73 @@ select.input:focus {
 .suite-nav-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.suite-nav-icon {
+  flex: 0 0 auto;
+}
+
+/* Botón de contraer/expandir (solo escritorio) */
+.suite-collapse-btn {
+  align-self: flex-end;
+  margin: 8px 12px 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--graphite-soft);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.suite-collapse-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.suite-collapse-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Modo contraído (solo iconos) ── */
+.suite-shell.sidebar-collapsed .suite-sidebar {
+  width: 76px;
+}
+
+.suite-shell.sidebar-collapsed .suite-collapsible {
+  display: none;
+}
+
+.suite-shell.sidebar-collapsed .suite-brand {
+  padding: 18px 0 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.suite-shell.sidebar-collapsed .suite-brand-module {
+  justify-content: center;
+}
+
+.suite-shell.sidebar-collapsed .suite-collapse-btn {
+  align-self: center;
+  margin: 8px 0 0;
+}
+
+.suite-shell.sidebar-collapsed .suite-sidebar-cta {
+  padding: 14px 12px 4px;
+}
+
+.suite-shell.sidebar-collapsed .suite-nav-link {
+  justify-content: center;
+  padding: 12px 0;
+  border-left-width: 3px;
+}
+
+.suite-shell.sidebar-collapsed .suite-sidebar-footer {
+  align-items: center;
 }
 
 .suite-sidebar-footer {
@@ -851,6 +919,25 @@ select.input:focus {
     transform: translateX(-100%);
     transition: transform 0.2s ease;
     width: 264px;
+  }
+
+  /* En móvil el menú deslizante siempre se muestra completo: el modo
+     contraído (solo iconos) es exclusivo de escritorio. */
+  .suite-shell.sidebar-collapsed .suite-sidebar {
+    width: 264px;
+  }
+
+  .suite-shell.sidebar-collapsed .suite-collapsible {
+    display: initial;
+  }
+
+  .suite-shell.sidebar-collapsed .suite-nav-link {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .suite-shell.sidebar-collapsed .suite-collapse-btn {
+    display: none;
   }
 
   .suite-shell.sidebar-open .suite-sidebar {
