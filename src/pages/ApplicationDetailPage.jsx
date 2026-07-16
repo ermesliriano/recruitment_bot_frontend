@@ -203,7 +203,7 @@ export default function ApplicationDetailPage() {
         <div className="row-space">
           <div>
             <h1 className="h1">
-              Detalle de aplicación
+              {data?.candidate_full_name || "Detalle de aplicación"}
               {data?.vacancy_title ? (
                 <span className="muted" style={{ fontWeight: 600 }}>
                   {" · "}
