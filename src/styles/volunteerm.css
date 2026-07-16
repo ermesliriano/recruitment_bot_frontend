@@ -789,6 +789,219 @@ select.input:focus {
   }
 }
 
+/* ── Preguntas comunes ────────────────────────────────── */
+
+.kpi-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.kpi-strip-item {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+.kpi-strip-item strong {
+  color: var(--text-primary);
+  margin-right: 4px;
+}
+
+.q-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.q-row:last-child {
+  border-bottom: none;
+}
+
+.q-order {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.q-order-number {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  min-width: 26px;
+  text-align: center;
+}
+
+.q-order .btn.small {
+  padding: 2px 8px;
+  line-height: 1;
+}
+
+.q-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.q-prompt {
+  font-weight: 600;
+}
+
+.q-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.q-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.q-badge.type {
+  background: var(--info-bg);
+  border-color: transparent;
+  color: var(--info);
+}
+
+.q-badge.required {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: #92400e;
+}
+
+.q-badge.conditional {
+  background: var(--graphite-soft);
+  border-color: transparent;
+  color: var(--text-inverse);
+}
+
+.q-badge.evaluates {
+  background: var(--success-bg);
+  border-color: transparent;
+  color: var(--success);
+}
+
+.q-badge.review {
+  background: var(--error-bg);
+  border-color: transparent;
+  color: var(--error);
+}
+
+.q-condition-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Menu kebab (tres puntos) accesible con <details> nativo */
+.kebab {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.kebab > summary {
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.kebab > summary::-webkit-details-marker {
+  display: none;
+}
+
+.kebab[open] > summary {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.kebab-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 25;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kebab-menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  font: inherit;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+.kebab-menu button:hover {
+  background: var(--accent-soft);
+}
+
+.kebab-menu button.danger {
+  color: var(--error);
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .q-row {
+    flex-wrap: wrap;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .q-row:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── CESAR IA Suite — AppShell con sidebar (Fase 1 rediseno) ───────── */
 
 .suite-shell {
