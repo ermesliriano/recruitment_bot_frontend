@@ -99,7 +99,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }) {
-  const { authState, currentUserLabel, logout, pushFlash } = useAppContext();
+  const { currentUserLabel, logout, pushFlash } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -212,9 +212,6 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
 
       <div className="suite-sidebar-footer">
         <span className="suite-collapsible">{currentUserLabel}</span>
-        <span className="pill suite-collapsible">
-          {authState.isEnvToken ? "Token .env" : "Token guardado"}
-        </span>
         <button
           className="linklike"
           type="button"

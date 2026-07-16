@@ -636,6 +636,9 @@ export async function updateCompanyInfo(tenantId, institutionalInfo, options = {
         institutional_info: institutionalInfo,
         email_from: options.emailFrom ?? null,
         email_from_name: options.emailFromName ?? null,
+        email_reply_to: options.emailReplyTo ?? null,
+        email_subject_default: options.emailSubjectDefault ?? null,
+        email_signature: options.emailSignature ?? null,
       },
       token: options.token,
     }

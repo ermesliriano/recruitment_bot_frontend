@@ -503,6 +503,292 @@ select.input:focus {
   margin-bottom: 6px;
 }
 
+/* ── Perfil de la empresa (perfil guiado) ─────────────────────── */
+
+.breadcrumb {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.profile-progress {
+  margin-top: 12px;
+}
+
+.profile-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.profile-progress-track {
+  margin-top: 6px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.profile-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.profile-status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.profile-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.profile-chip.ok {
+  background: var(--success-bg);
+  border-color: rgba(31, 143, 95, 0.4);
+  color: var(--success);
+}
+
+.profile-chip.warn {
+  background: var(--warning-bg);
+  border-color: rgba(231, 155, 50, 0.5);
+  color: #92400e;
+}
+
+.profile-missing {
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+/* Tabs */
+.profile-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.profile-tab {
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.profile-tab:hover {
+  color: var(--text-primary);
+}
+
+.profile-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.profile-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.profile-tabs-select {
+  display: none;
+}
+
+/* Layout 70/30 */
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.reco-panel {
+  position: sticky;
+  top: 70px;
+}
+
+.reco-panel ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+/* Badges de clasificacion de campos */
+.req-badge {
+  display: inline-block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.req-badge.required {
+  background: var(--accent-soft);
+  color: #92400e;
+}
+
+.req-badge.recommended {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.req-badge.optional {
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.field-help {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.field-error-text {
+  font-size: 0.8rem;
+  color: var(--error);
+  margin-top: 4px;
+}
+
+.input.invalid {
+  border-color: var(--error);
+}
+
+.char-counter {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: right;
+  margin-top: 2px;
+}
+
+.future-feature {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface-muted);
+}
+
+.future-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--info);
+  background: var(--info-bg);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-left: 8px;
+}
+
+/* Barra de guardado sticky */
+.sticky-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: 0 -4px 16px rgba(38, 39, 41, 0.08);
+}
+
+.save-status {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.save-status.dirty {
+  color: #92400e;
+}
+
+.save-status.saved {
+  color: var(--success);
+}
+
+.save-status.error {
+  color: var(--error);
+}
+
+/* Vista previa de Maria */
+.maria-preview-q {
+  font-weight: 700;
+  margin: 14px 0 6px;
+}
+
+.maria-preview-bubble {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.maria-preview-bubble .chat-bubble {
+  background: var(--accent-soft);
+}
+
+@media (max-width: 1024px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .reco-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-tabs {
+    display: none;
+  }
+
+  .profile-tabs-select {
+    display: block;
+    width: 100%;
+  }
+
+  .sticky-savebar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sticky-savebar .row {
+    justify-content: stretch;
+  }
+
+  .sticky-savebar .btn {
+    flex: 1;
+  }
+}
+
 /* ── CESAR IA Suite — AppShell con sidebar (Fase 1 rediseno) ───────── */
 
 .suite-shell {
