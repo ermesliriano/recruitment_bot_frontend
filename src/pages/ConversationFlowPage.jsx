@@ -11,6 +11,7 @@ export default function ConversationFlowPage() {
   const [personalityPrompt, setPersonalityPrompt] = useState("");
   const [contractText, setContractText] = useState("");
   const [rewriteMessages, setRewriteMessages] = useState(true);
+  const [postCompletionMode, setPostCompletionMode] = useState("silent_forever");
   const [defaults, setDefaults] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,7 @@ export default function ConversationFlowPage() {
           )
         );
         setRewriteMessages(flow?.llm_rewrite_messages !== false);
+        setPostCompletionMode(flow?.post_completion_mode || "silent_forever");
       } catch (loadError) {
         if (!ignore) {
           setError(
@@ -109,6 +111,7 @@ export default function ConversationFlowPage() {
         llm_personality_prompt: personalityPrompt.trim() || null,
         llm_flow_contract: contract,
         llm_rewrite_messages: rewriteMessages,
+        post_completion_mode: postCompletionMode,
       });
       setMode(flow?.conversation_mode || mode);
       setSuccess("Configuración guardada correctamente.");
@@ -196,6 +199,42 @@ export default function ConversationFlowPage() {
                 </label>
               </div>
             ) : null}
+          </section>
+
+          <section className="card">
+            <h2 className="h2">Al finalizar la postulación</h2>
+            <p className="muted">
+              Qué hace el asistente cuando el candidato vuelve a escribir después
+              de haber completado su postulación. Aplica tanto al bot clásico como
+              al flujo IA.
+            </p>
+            <div className="field">
+              <label className="field-label">
+                <input
+                  type="radio"
+                  name="post_completion_mode"
+                  value="silent_forever"
+                  checked={postCompletionMode === "silent_forever"}
+                  onChange={() => setPostCompletionMode("silent_forever")}
+                />{" "}
+                No volver a interactuar — tras el mensaje de cierre, el asistente
+                no responde más mensajes de ese candidato en ese canal. El
+                reclutador siempre puede re-contactarlo desde Carga de CV o
+                Conversaciones.
+              </label>
+              <label className="field-label">
+                <input
+                  type="radio"
+                  name="post_completion_mode"
+                  value="reopen_next_day"
+                  checked={postCompletionMode === "reopen_next_day"}
+                  onChange={() => setPostCompletionMode("reopen_next_day")}
+                />{" "}
+                Reabrir al día siguiente — silencio total el mismo día del cierre;
+                a partir del día siguiente, cualquier mensaje del candidato
+                reinicia el flujo mostrando las vacantes activas.
+              </label>
+            </div>
           </section>
 
           {mode === "llm" ? (
