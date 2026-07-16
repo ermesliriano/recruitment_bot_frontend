@@ -202,7 +202,15 @@ export default function ApplicationDetailPage() {
       <section className="card">
         <div className="row-space">
           <div>
-            <h1 className="h1">Detalle de aplicación</h1>
+            <h1 className="h1">
+              Detalle de aplicación
+              {data?.vacancy_title ? (
+                <span className="muted" style={{ fontWeight: 600 }}>
+                  {" · "}
+                  {data.vacancy_title}
+                </span>
+              ) : null}
+            </h1>
             <p className="muted">
               Información detallada de la candidatura seleccionada: respuestas del
               candidato, análisis del CV y otras candidaturas dentro de la empresa.

@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import MariaAvatar from "./MariaAvatar";
 
@@ -11,7 +11,9 @@ import MariaAvatar from "./MariaAvatar";
  */
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", end: true },
-  { to: "/ranking", label: "Ranking" },
+  // El detalle de aplicación (/applications/:id) depende del ranking, así que
+  // mantiene resaltada la opción Ranking en el menú.
+  { to: "/ranking", label: "Ranking", alsoActiveOn: ["/applications"] },
   { to: "/cv-imports", label: "Carga de CV" },
   { to: "/tenant-questions", label: "Preguntas" },
   { to: "/conversations", label: "Conversaciones" },
@@ -19,13 +21,10 @@ const NAV_ITEMS = [
   { to: "/conversation-flow", label: "Configuración" },
 ];
 
-function navClassName({ isActive }) {
-  return isActive ? "suite-nav-link active" : "suite-nav-link";
-}
-
 export default function Sidebar({ onNavigate }) {
   const { authState, currentUserLabel, logout, pushFlash } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
 
   function handleLogout() {
     logout();
@@ -64,17 +63,24 @@ export default function Sidebar({ onNavigate }) {
       </div>
 
       <nav className="suite-nav">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={navClassName}
-            onClick={() => onNavigate?.()}
-          >
-            {item.label}
-          </NavLink>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const forceActive = (item.alsoActiveOn || []).some((prefix) =>
+            location.pathname.startsWith(prefix)
+          );
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                isActive || forceActive ? "suite-nav-link active" : "suite-nav-link"
+              }
+              onClick={() => onNavigate?.()}
+            >
+              {item.label}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className="suite-sidebar-footer">
