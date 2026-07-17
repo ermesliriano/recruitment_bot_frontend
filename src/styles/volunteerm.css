@@ -1002,6 +1002,16 @@ select.input:focus {
   }
 }
 
+/* Texto extraído del CV colapsable (detalle de aplicación) */
+.cv-text-details > summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.cv-text-details > summary:hover .h2 {
+  color: var(--accent-hover);
+}
+
 /* ── Ranking de candidaturas ────────────────────────────── */
 
 /* Combobox de vacantes */

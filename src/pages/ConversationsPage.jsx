@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
 import {
@@ -50,7 +50,8 @@ function threadKey(thread) {
 }
 
 export default function ConversationsPage() {
-  const { tenantId, vacancyId } = useAppContext();
+  const { tenantId, vacancyId, setSelection } = useAppContext();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [threads, setThreads] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -64,6 +65,16 @@ export default function ConversationsPage() {
   const messagesEndRef = useRef(null);
   const selectedRef = useRef(null);
   selectedRef.current = selected;
+
+  // Deep-link (?vacancyId=&candidateId=): fija la vacante en el contexto. Solo
+  // depende de searchParams para evitar el ping-pong URL<->contexto.
+  useEffect(() => {
+    const queryVacancyId = String(searchParams.get("vacancyId") || "").trim();
+    if (queryVacancyId && queryVacancyId !== vacancyId) {
+      setSelection({ vacancyId: queryVacancyId });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSelection]);
 
   const loadThreads = useCallback(async () => {
     if (!tenantId || !vacancyId) {
@@ -119,6 +130,23 @@ export default function ConversationsPage() {
   useEffect(() => {
     loadThreads();
   }, [loadThreads]);
+
+  // Deep-link: al cargar los hilos, auto-abre el del candidato indicado en la
+  // URL (una sola vez; después se limpia el parámetro para no forzar la
+  // selección al navegar manualmente).
+  useEffect(() => {
+    const candidateId = String(searchParams.get("candidateId") || "").trim();
+    if (!candidateId || threads.length === 0) return;
+
+    const match = threads.find((t) => t.candidate_id === candidateId);
+    if (match) {
+      handleSelect(match);
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("candidateId");
+    setSearchParams(nextParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threads, searchParams]);
 
   // Auto-refresco suave del hilo abierto y del listado.
   useEffect(() => {

@@ -242,6 +242,21 @@ export default function ApplicationDetailPage() {
             <Link className="btn" to="/dashboard">
               Dashboard
             </Link>
+            {data?.candidate_id ? (
+              <button
+                className="btn primary"
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/conversations?vacancyId=${encodeURIComponent(
+                      String(data.vacancy_id || "")
+                    )}&candidateId=${encodeURIComponent(String(data.candidate_id))}`
+                  )
+                }
+              >
+                Conversación
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
@@ -362,14 +377,23 @@ export default function ApplicationDetailPage() {
           </section>
 
           <section className="card">
-            <h2 className="h2">Texto extraído del CV</h2>
-            {data.cv_extracted_text ? (
-              <div className="cv-transcript">{data.cv_extracted_text}</div>
-            ) : (
-              <p className="muted">
-                No hay texto extraído del CV para esta candidatura.
-              </p>
-            )}
+            <details className="cv-text-details">
+              <summary>
+                <h2 className="h2" style={{ display: "inline" }}>Texto extraído del CV</h2>
+                <span className="muted" style={{ marginLeft: 8, fontSize: "0.85rem" }}>
+                  (pulsa para mostrar u ocultar)
+                </span>
+              </summary>
+              {data.cv_extracted_text ? (
+                <div className="cv-transcript" style={{ marginTop: 10 }}>
+                  {data.cv_extracted_text}
+                </div>
+              ) : (
+                <p className="muted" style={{ marginTop: 10 }}>
+                  No hay texto extraído del CV para esta candidatura.
+                </p>
+              )}
+            </details>
           </section>
 
           <section className="card">
