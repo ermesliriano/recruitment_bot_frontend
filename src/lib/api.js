@@ -692,3 +692,63 @@ export async function sendConversationMessage(
     }
   );
 }
+
+// ── Fichero original del CV ─────────────────────────────────
+
+/**
+ * Descarga el fichero original del CV como Blob (pdf/imagen/doc).
+ * Devuelve { blob, mimeType, filename }. Lanza ApiError con el detalle del
+ * backend si el fichero no está disponible.
+ */
+export async function fetchApplicationCvFile(tenantId, applicationId, options = {}) {
+  const effectiveToken = String(
+    options.token || getAuthToken() || ENV_ADMIN_TOKEN || ""
+  ).trim();
+
+  const headers = new Headers();
+  if (effectiveToken) {
+    headers.set("Authorization", `Bearer ${effectiveToken}`);
+  }
+
+  let response;
+  try {
+    response = await fetch(
+      buildUrl(
+        `/admin/v1/tenants/${encodeURIComponent(String(tenantId).trim())}/applications/${encodeURIComponent(String(applicationId).trim())}/cv-file`
+      ),
+      { method: "GET", headers }
+    );
+  } catch (networkError) {
+    throw new ApiError(networkError.message || "No se pudo conectar con la API.");
+  }
+
+  if (!response.ok) {
+    let detail = `Error ${response.status}`;
+    try {
+      const data = await response.json();
+      detail = data?.detail || detail;
+    } catch {
+      // cuerpo no JSON: dejamos el mensaje generico
+    }
+    throw new ApiError(detail, { status: response.status });
+  }
+
+  const blob = await response.blob();
+  const mimeType = response.headers.get("Content-Type") || "application/octet-stream";
+
+  let filename = "cv";
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  if (utf8Match) {
+    try {
+      filename = decodeURIComponent(utf8Match[1]);
+    } catch {
+      filename = utf8Match[1];
+    }
+  } else if (plainMatch) {
+    filename = plainMatch[1];
+  }
+
+  return { blob, mimeType, filename };
+}

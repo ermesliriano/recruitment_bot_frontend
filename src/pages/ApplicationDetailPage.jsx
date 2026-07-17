@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { getApplicationDetail, getRanking } from "../lib/api";
+import { getApplicationDetail, getRanking, fetchApplicationCvFile } from "../lib/api";
 import { formatOrigin, formatRecommendation } from "../lib/labels";
 
 function formatScore(value) {
@@ -95,6 +95,36 @@ export default function ApplicationDetailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [neighbors, setNeighbors] = useState({ prevId: null, nextId: null });
+  // Visor del CV original: idle | loading | loaded | error
+  const [cvFile, setCvFile] = useState({ state: "idle", url: "", mimeType: "", filename: "", error: "" });
+
+  // Al cambiar de candidatura, libera el objeto URL y resetea el visor.
+  useEffect(() => {
+    return () => {
+      setCvFile((current) => {
+        if (current.url) URL.revokeObjectURL(current.url);
+        return { state: "idle", url: "", mimeType: "", filename: "", error: "" };
+      });
+    };
+  }, [applicationId]);
+
+  async function handleLoadCvFile() {
+    if (!tenantId || !applicationId) return;
+    try {
+      setCvFile({ state: "loading", url: "", mimeType: "", filename: "", error: "" });
+      const { blob, mimeType, filename } = await fetchApplicationCvFile(tenantId, applicationId);
+      const url = URL.createObjectURL(blob);
+      setCvFile({ state: "loaded", url, mimeType, filename, error: "" });
+    } catch (loadError) {
+      setCvFile({
+        state: "error",
+        url: "",
+        mimeType: "",
+        filename: "",
+        error: loadError.message || "No se pudo cargar el fichero del CV.",
+      });
+    }
+  }
 
   // Cache del ranking de la vacante (solo candidaturas completadas) para no
   // recargarlo al saltar entre candidaturas de la misma vacante.
@@ -374,6 +404,68 @@ export default function ApplicationDetailPage() {
                 ))}
               </div>
             )}
+          </section>
+
+          <section className="card">
+            <div className="row-space">
+              <div>
+                <h2 className="h2">CV original</h2>
+                <p className="muted" style={{ marginBottom: 0 }}>
+                  Fichero tal y como lo envió el candidato (PDF o imagen).
+                </p>
+              </div>
+              <div className="row">
+                {cvFile.state !== "loaded" ? (
+                  <button
+                    className="btn"
+                    type="button"
+                    disabled={cvFile.state === "loading"}
+                    onClick={handleLoadCvFile}
+                  >
+                    {cvFile.state === "loading" ? "Cargando..." : "Ver CV original"}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => window.open(cvFile.url, "_blank", "noopener")}
+                    >
+                      Abrir en pestaña nueva
+                    </button>
+                    <a className="btn" href={cvFile.url} download={cvFile.filename || "cv"}>
+                      Descargar
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {cvFile.state === "error" ? (
+              <div className="warning-box" style={{ marginTop: 10 }}>{cvFile.error}</div>
+            ) : null}
+
+            {cvFile.state === "loaded" ? (
+              cvFile.mimeType.includes("pdf") ? (
+                <iframe
+                  className="cv-file-frame"
+                  src={cvFile.url}
+                  title={`CV original: ${cvFile.filename}`}
+                />
+              ) : cvFile.mimeType.startsWith("image/") ? (
+                <img
+                  className="cv-file-image"
+                  src={cvFile.url}
+                  alt={`CV original: ${cvFile.filename}`}
+                />
+              ) : (
+                <p className="muted" style={{ marginTop: 10 }}>
+                  Este formato ({cvFile.mimeType || "desconocido"}) no se puede
+                  previsualizar en el navegador; usa “Descargar” para abrirlo con
+                  la aplicación adecuada.
+                </p>
+              )
+            ) : null}
           </section>
 
           <section className="card">
