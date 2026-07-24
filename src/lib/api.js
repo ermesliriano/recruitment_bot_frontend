@@ -639,10 +639,68 @@ export async function updateCompanyInfo(tenantId, institutionalInfo, options = {
         email_reply_to: options.emailReplyTo ?? null,
         email_subject_default: options.emailSubjectDefault ?? null,
         email_signature: options.emailSignature ?? null,
+        whatsapp_sender: options.whatsappSender ?? null,
       },
       token: options.token,
     }
   );
+}
+
+// ── Autenticación de usuarios y administración (roles) ─────────────
+
+export async function authBootstrapStatus() {
+  return apiFetch("/auth/bootstrap-status", { method: "GET" });
+}
+
+export async function authBootstrap({ email, password, fullName }) {
+  return apiFetch("/auth/bootstrap", {
+    method: "POST",
+    body: { email, password, full_name: fullName || null },
+  });
+}
+
+export async function authLogin({ email, password }) {
+  return apiFetch("/auth/login", {
+    method: "POST",
+    body: { email, password },
+  });
+}
+
+export async function authMe(token) {
+  return apiFetch("/auth/me", { method: "GET", token });
+}
+
+export async function listTenantsAdmin(options = {}) {
+  return apiFetch("/admin/v1/tenants", { method: "GET", token: options.token });
+}
+
+export async function createTenant({ name, slug }, options = {}) {
+  return apiFetch("/admin/v1/tenants", {
+    method: "POST",
+    body: { name, slug: slug || null },
+    token: options.token,
+  });
+}
+
+export async function listUsersAdmin(options = {}) {
+  return apiFetch("/admin/v1/users", { method: "GET", token: options.token });
+}
+
+export async function createUserAdmin(
+  { email, password, role, tenantId, fullName },
+  options = {}
+) {
+  return apiFetch("/admin/v1/users", {
+    method: "POST",
+    body: {
+      email,
+      password,
+      role,
+      tenant_id: tenantId || null,
+      full_name: fullName || null,
+    },
+    token: options.token,
+  });
 }
 
 // ── Conversaciones con candidatos (transcripción) ────────────────────

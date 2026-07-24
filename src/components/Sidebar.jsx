@@ -84,6 +84,13 @@ const ICONS = {
       <circle cx="14.5" cy="16" r="2" fill="var(--graphite)" />
     </Icon>
   ),
+  admin: (
+    <Icon>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M4 19c0-2.8 2.2-5 5-5s5 2.2 5 5" />
+      <path d="M16.5 5.5l1 .3a1 1 0 0 1 .6 1.4l-.4.9.7.8 1-.2a1 1 0 0 1 1.1 1l-.1 1-.9.5v1l.9.5a1 1 0 0 1 .1 1l-1.1 1-1-.2-.7.8.4.9" />
+    </Icon>
+  ),
 };
 
 const NAV_ITEMS = [
@@ -95,13 +102,19 @@ const NAV_ITEMS = [
   { to: "/tenant-questions", label: "Preguntas", icon: "questions" },
   { to: "/conversations", label: "Conversaciones", icon: "conversations" },
   { to: "/company-info", label: "Empresa", icon: "company" },
-  { to: "/conversation-flow", label: "Configuración", icon: "settings" },
+  // Solo administradores generales:
+  { to: "/conversation-flow", label: "Configuración", icon: "settings", superadminOnly: true },
+  { to: "/admin", label: "Administración", icon: "admin", superadminOnly: true },
 ];
 
 export default function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }) {
-  const { currentUserLabel, logout, pushFlash } = useAppContext();
+  const { currentUserLabel, isSuperadmin, logout, pushFlash } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.superadminOnly || isSuperadmin
+  );
 
   function handleLogout() {
     logout();
@@ -188,7 +201,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
       </div>
 
       <nav className="suite-nav">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const forceActive = (item.alsoActiveOn || []).some((prefix) =>
             location.pathname.startsWith(prefix)
           );

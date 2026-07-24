@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   clearAuthState,
   getInitialAuthState,
   persistAuthState,
 } from "../lib/auth";
+import { authMe } from "../lib/api";
 
 const AppContext = createContext(null);
 
@@ -91,14 +92,14 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  const login = useCallback(({ email, token, remember }) => {
-    const nextAuthState = persistAuthState({ email, token, remember });
+  const login = useCallback(({ email, token, remember, user }) => {
+    const nextAuthState = persistAuthState({ email, token, remember, user });
     setAuthState(nextAuthState);
     return nextAuthState;
   }, []);
 
-  const signup = useCallback(({ email, token, remember }) => {
-    const nextAuthState = persistAuthState({ email, token, remember });
+  const signup = useCallback(({ email, token, remember, user }) => {
+    const nextAuthState = persistAuthState({ email, token, remember, user });
     setAuthState(nextAuthState);
     return nextAuthState;
   }, []);
@@ -109,10 +110,56 @@ export function AppProvider({ children }) {
     return nextAuthState;
   }, []);
 
+  // Restaura/valida la sesión de usuario al cargar la app: refresca el perfil
+  // (rol, empresa) y cierra la sesión si el token caducó. Las sesiones por
+  // token (env/legado) no pasan por aquí.
+  useEffect(() => {
+    let cancelled = false;
+    const { token, isEnvToken, user, email, remember } = authState;
+    if (!token || isEnvToken || user !== null) return undefined;
+
+    // Sesión guardada sin perfil: puede ser token legado pegado a mano o un
+    // token de usuario de una versión previa. Intentamos hidratar.
+    authMe(token)
+      .then((data) => {
+        if (cancelled || !data?.user) return;
+        const next = persistAuthState({ email, token, remember, user: data.user });
+        setAuthState(next);
+      })
+      .catch((error) => {
+        // 401 en /auth/me con token legado válido para admin: lo dejamos estar.
+        if (!cancelled && error?.status === 401) {
+          // Token de usuario caducado/ inválido → no cerramos por si es el
+          // ADMIN_TOKEN legado (que /auth/me no reconoce); el resto de la API
+          // decidirá. No-op consciente.
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authState.token]);
+
+  const user = authState.user;
+  const isSuperadmin = Boolean(
+    authState.isEnvToken || user?.role === "superadmin" || (authState.token && !user)
+  );
+
+  // Rol company: fuerza SU empresa como selección activa en todo momento.
+  useEffect(() => {
+    if (user?.role === "company" && user.tenant_id && selectionState.tenantId !== user.tenant_id) {
+      setSelection({ tenantId: user.tenant_id, vacancyId: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectionState.tenantId]);
+
   const value = useMemo(
     () => ({
       authState,
-      currentUserLabel: authState.email || "Operador local",
+      user,
+      isSuperadmin,
+      currentUserLabel: user?.full_name || authState.email || "Operador local",
       isAuthenticated: Boolean(authState.token),
       login,
       signup,
@@ -126,6 +173,8 @@ export function AppProvider({ children }) {
     }),
     [
       authState,
+      user,
+      isSuperadmin,
       flashes,
       selectionState,
       login,

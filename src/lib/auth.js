@@ -82,7 +82,7 @@ function isEnvTokenDisabled() {
   return storages.some((storage) => storage.getItem(ENV_DISABLED_KEY) === "1");
 }
 
-function normalizeAuthState({ email, token, lastLoginAt }, source) {
+function normalizeAuthState({ email, token, lastLoginAt, user }, source) {
   return {
     email: String(email || DEFAULT_EMAIL || "").trim(),
     token: String(token || "").trim(),
@@ -90,6 +90,9 @@ function normalizeAuthState({ email, token, lastLoginAt }, source) {
     source,
     isEnvToken: source === "env",
     lastLoginAt: lastLoginAt || null,
+    // Perfil del usuario autenticado ({id,email,full_name,role,tenant_id,
+    // tenant_name}) o null en sesiones por token (legado/env).
+    user: user || null,
   };
 }
 
@@ -129,7 +132,7 @@ export function getInitialAuthState() {
   };
 }
 
-export function persistAuthState({ email, token, remember }) {
+export function persistAuthState({ email, token, remember, user }) {
   clearStoredAuth();
   setEnvTokenDisabled(false);
 
@@ -137,6 +140,7 @@ export function persistAuthState({ email, token, remember }) {
     email: String(email || DEFAULT_EMAIL).trim().toLowerCase(),
     token: String(token || "").trim(),
     lastLoginAt: new Date().toISOString(),
+    user: user || null,
   };
 
   if (remember) {

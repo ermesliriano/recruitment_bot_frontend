@@ -1,7 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AppProvider, useAppContext } from "./context/AppContext";
+import AdminPage from "./pages/AdminPage";
 import ApplicationDetailPage from "./pages/ApplicationDetailPage";
 import CompanyInfoPage from "./pages/CompanyInfoPage";
 import ConversationFlowPage from "./pages/ConversationFlowPage";
@@ -26,6 +27,12 @@ function NotFoundRedirect() {
   return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
 }
 
+// Rutas reservadas al administrador general (rol company → dashboard).
+function SuperadminRoute() {
+  const { isSuperadmin } = useAppContext();
+  return isSuperadmin ? <Outlet /> : <Navigate to="/dashboard" replace />;
+}
+
 export default function App() {
   return (
     <AppProvider>
@@ -45,7 +52,10 @@ export default function App() {
               <Route path="/vacancies/:vacancyId/edit" element={<VacancyEditPage />} />
               <Route path="/vacancies/:vacancyId/questions" element={<VacancyQuestionsPage />} />
               <Route path="/tenant-questions" element={<TenantQuestionsPage />} />
-              <Route path="/conversation-flow" element={<ConversationFlowPage />} />
+              <Route element={<SuperadminRoute />}>
+                <Route path="/conversation-flow" element={<ConversationFlowPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+              </Route>
               <Route path="/company-info" element={<CompanyInfoPage />} />
               <Route path="/conversations" element={<ConversationsPage />} />
             </Route>

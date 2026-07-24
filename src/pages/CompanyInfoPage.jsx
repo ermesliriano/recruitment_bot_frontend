@@ -75,6 +75,7 @@ const EMPTY_CHANNEL = {
   email_reply_to: "",
   email_subject_default: "",
   email_signature: "",
+  whatsapp_sender: "",
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -172,6 +173,7 @@ export default function CompanyInfoPage() {
           email_reply_to: data?.email_reply_to || "",
           email_subject_default: data?.email_subject_default || "",
           email_signature: data?.email_signature || "",
+          whatsapp_sender: data?.whatsapp_sender || "",
         };
 
         setForm(nextForm);
@@ -250,6 +252,7 @@ export default function CompanyInfoPage() {
     map.website = validateUrlValue(form.website);
     map.email_from = validateEmailValue(channel.email_from);
     map.email_reply_to = validateEmailValue(channel.email_reply_to);
+    map.whatsapp_sender = validatePhoneValue(channel.whatsapp_sender);
     if (form.description && form.description.trim().length < 40) {
       map.description = "La descripción es muy corta: usa al menos 40 caracteres.";
     }
@@ -363,6 +366,7 @@ export default function CompanyInfoPage() {
         emailReplyTo: channel.email_reply_to.trim() || null,
         emailSubjectDefault: channel.email_subject_default.trim() || null,
         emailSignature: channel.email_signature.trim() || null,
+        whatsappSender: channel.whatsapp_sender.trim() || null,
       });
 
       const info = data?.institutional_info || {};
@@ -376,6 +380,7 @@ export default function CompanyInfoPage() {
         email_reply_to: data?.email_reply_to || "",
         email_subject_default: data?.email_subject_default || "",
         email_signature: data?.email_signature || "",
+        whatsapp_sender: data?.whatsapp_sender || "",
       };
       setForm(nextForm);
       setChannel(nextChannel);
@@ -825,6 +830,28 @@ export default function CompanyInfoPage() {
                       Dirección completa: <strong>{addressPreview}</strong>
                     </p>
                   ) : null}
+
+                  <div className="future-feature" style={{ marginTop: 14 }}>
+                    <strong>Canal de WhatsApp (remitente)</strong>
+                    <p className="muted" style={{ margin: "6px 0 8px" }}>
+                      Número desde el que María contacta a los candidatos por
+                      WhatsApp. Debe ser un número aprobado para WhatsApp en la
+                      plataforma de mensajería; si se deja vacío se usa el número
+                      general de la plataforma.
+                    </p>
+                    <input
+                      id="pf-wa-sender"
+                      className={`input${errors.whatsapp_sender ? " invalid" : ""}`}
+                      type="tel"
+                      style={{ maxWidth: 280 }}
+                      value={channel.whatsapp_sender}
+                      placeholder="+18095551234"
+                      onChange={(e) => setChannelField("whatsapp_sender", e.target.value)}
+                    />
+                    {errors.whatsapp_sender ? (
+                      <div className="field-error-text" role="alert">{errors.whatsapp_sender}</div>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 

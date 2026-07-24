@@ -62,7 +62,7 @@ export default function Topbar() {
               </NavLink>
 
               <NavLink className={getNavLinkClassName} to="/signup">
-                Alta local
+                Administrador inicial
               </NavLink>
             </>
           )}
