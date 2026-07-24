@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
+import { EMAIL_CHANNEL_ENABLED } from "../lib/featureFlags";
 import {
   getConversationMessages,
   getConversations,
@@ -84,7 +85,11 @@ export default function ConversationsPage() {
     try {
       setLoadingThreads(true);
       const data = await getConversations(tenantId, { vacancyId });
-      setThreads(Array.isArray(data?.items) ? data.items : []);
+      const items = Array.isArray(data?.items) ? data.items : [];
+      // Canal email invisibilizado mientras no sea funcional (feature flag).
+      setThreads(
+        EMAIL_CHANNEL_ENABLED ? items : items.filter((t) => t.platform !== "email")
+      );
     } catch (loadError) {
       setError(loadError.message || "No se pudieron cargar las conversaciones.");
     } finally {

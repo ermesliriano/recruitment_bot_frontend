@@ -5,6 +5,7 @@ import CvUploadPanel from "../components/CvUploadPanel";
 import Modal from "../components/Modal";
 import VacancySelector from "../components/VacancySelector";
 import { useAppContext } from "../context/AppContext";
+import { EMAIL_CHANNEL_ENABLED } from "../lib/featureFlags";
 import {
   createCvImportJob,
   listCvImportJobs,
@@ -241,7 +242,7 @@ export default function CvImportsPage() {
         <h1 className="h1">Carga manual de CVs</h1>
         <p className="muted">
           Sube uno o varios CVs para crear o reanudar candidaturas y contactar a los
-          candidatos por el canal que elijas.
+          candidatos{EMAIL_CHANNEL_ENABLED ? " por el canal que elijas" : " por WhatsApp"}.
         </p>
       </section>
 
@@ -252,6 +253,7 @@ export default function CvImportsPage() {
 
       <CvUploadPanel files={files} onFilesChange={setFiles} disabled={submitting} />
 
+      {EMAIL_CHANNEL_ENABLED ? (
       <section className="card">
         <h2 className="h2">Canal de contacto</h2>
         <div className="field">
@@ -281,6 +283,7 @@ export default function CvImportsPage() {
           </label>
         </div>
       </section>
+      ) : null}
 
       <section className="card">
         <div className="form-actions">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MariaAvatar from "../components/MariaAvatar";
 import { useAppContext } from "../context/AppContext";
+import { EMAIL_CHANNEL_ENABLED } from "../lib/featureFlags";
 import { getCompanyInfo, updateCompanyInfo } from "../lib/api";
 
 /**
@@ -17,7 +18,8 @@ const TABS = [
   { id: "contact", label: "Contacto y ubicación" },
   { id: "digital", label: "Presencia digital" },
   { id: "culture", label: "Cultura y propuesta laboral" },
-  { id: "email", label: "Correo de reclutamiento" },
+  // Pestaña del canal de email visible solo con el flag activo.
+  ...(EMAIL_CHANNEL_ENABLED ? [{ id: "email", label: "Correo de reclutamiento" }] : []),
   { id: "preview", label: "Vista previa de María" },
 ];
 
@@ -272,7 +274,9 @@ export default function CompanyInfoPage() {
       { key: "culture", label: "Cultura de trabajo", ok: Boolean(form.culture.trim()) },
       { key: "benefits", label: "Beneficios", ok: Boolean(form.benefits.trim()) },
       { key: "work_mode", label: "Modalidad de trabajo", ok: Boolean(form.work_mode.trim()) },
-      { key: "email_from", label: "Correo remitente", ok: Boolean(channel.email_from.trim()) },
+      ...(EMAIL_CHANNEL_ENABLED
+        ? [{ key: "email_from", label: "Correo remitente", ok: Boolean(channel.email_from.trim()) }]
+        : []),
     ];
     const optional = [
       { key: "instagram", label: "Instagram", ok: Boolean(form.instagram.trim()) },
@@ -316,7 +320,7 @@ export default function CompanyInfoPage() {
     if (!form.benefits.trim() || !form.culture.trim()) {
       items.push("Completa beneficios y cultura: son de las preguntas más frecuentes de los candidatos.");
     }
-    if (!channel.email_from.trim()) {
+    if (EMAIL_CHANNEL_ENABLED && !channel.email_from.trim()) {
       items.push("Configura el correo remitente antes de contactar candidatos por email.");
     }
     if (!form.linkedin.trim()) {
@@ -604,11 +608,13 @@ export default function CompanyInfoPage() {
                 ? "Información esencial completa"
                 : "Faltan datos esenciales"}
             </span>
-            <span className={`profile-chip ${completeness.channelConfigured ? "ok" : "warn"}`}>
-              {completeness.channelConfigured
-                ? "Canal de contacto configurado"
-                : "Canal de contacto pendiente"}
-            </span>
+            {EMAIL_CHANNEL_ENABLED ? (
+              <span className={`profile-chip ${completeness.channelConfigured ? "ok" : "warn"}`}>
+                {completeness.channelConfigured
+                  ? "Canal de contacto configurado"
+                  : "Canal de contacto pendiente"}
+              </span>
+            ) : null}
             <span className={`profile-chip ${completeness.socialsConfigured ? "ok" : ""}`}>
               {completeness.socialsConfigured
                 ? "Redes sociales configuradas"
