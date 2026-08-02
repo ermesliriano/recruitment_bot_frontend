@@ -1,0 +1,156 @@
+From 246dada353791922c973828cb08c6121682dae24 Mon Sep 17 00:00:00 2001
+From: Ermes Liriano <ermesliriano@mercedarios.net>
+Date: Fri, 24 Jul 2026 11:48:49 +0200
+Subject: [PATCH 2/4] set invisible mail channel options
+
+---
+ src/lib/featureFlags.js         | 11 +++++++++++
+ src/pages/CompanyInfoPage.jsx   | 22 ++++++++++++++--------
+ src/pages/ConversationsPage.jsx |  7 ++++++-
+ src/pages/CvImportsPage.jsx     |  5 ++++-
+ 4 files changed, 35 insertions(+), 10 deletions(-)
+ create mode 100644 src/lib/featureFlags.js
+
+diff --git a/src/lib/featureFlags.js b/src/lib/featureFlags.js
+new file mode 100644
+index 0000000..5e647fe
+--- /dev/null
++++ b/src/lib/featureFlags.js
+@@ -0,0 +1,11 @@
++// src/lib/featureFlags.js
++/**
++ * Flags de funcionalidades del frontend.
++ *
++ * EMAIL_CHANNEL_ENABLED: controla la visibilidad del canal de email
++ * (outbound en Carga de CVs, pestaña "Correo de reclutamiento" del perfil de
++ * empresa e hilos de email en Conversaciones). El backend conserva toda la
++ * funcionalidad; esto solo la oculta en la interfaz mientras no sea funcional.
++ * Para reactivar el canal: poner a true.
++ */
++export const EMAIL_CHANNEL_ENABLED = false;
+diff --git a/src/pages/CompanyInfoPage.jsx b/src/pages/CompanyInfoPage.jsx
+index ec53805..7858e57 100644
+--- a/src/pages/CompanyInfoPage.jsx
++++ b/src/pages/CompanyInfoPage.jsx
+@@ -1,6 +1,7 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import MariaAvatar from "../components/MariaAvatar";
+ import { useAppContext } from "../context/AppContext";
++import { EMAIL_CHANNEL_ENABLED } from "../lib/featureFlags";
+ import { getCompanyInfo, updateCompanyInfo } from "../lib/api";
+ 
+ /**
+@@ -17,7 +18,8 @@ const TABS = [
+   { id: "contact", label: "Contacto y ubicación" },
+   { id: "digital", label: "Presencia digital" },
+   { id: "culture", label: "Cultura y propuesta laboral" },
+-  { id: "email", label: "Correo de reclutamiento" },
++  // Pestaña del canal de email visible solo con el flag activo.
++  ...(EMAIL_CHANNEL_ENABLED ? [{ id: "email", label: "Correo de reclutamiento" }] : []),
+   { id: "preview", label: "Vista previa de María" },
+ ];
+ 
+@@ -272,7 +274,9 @@ export default function CompanyInfoPage() {
+       { key: "culture", label: "Cultura de trabajo", ok: Boolean(form.culture.trim()) },
+       { key: "benefits", label: "Beneficios", ok: Boolean(form.benefits.trim()) },
+       { key: "work_mode", label: "Modalidad de trabajo", ok: Boolean(form.work_mode.trim()) },
+-      { key: "email_from", label: "Correo remitente", ok: Boolean(channel.email_from.trim()) },
++      ...(EMAIL_CHANNEL_ENABLED
++        ? [{ key: "email_from", label: "Correo remitente", ok: Boolean(channel.email_from.trim()) }]
++        : []),
+     ];
+     const optional = [
+       { key: "instagram", label: "Instagram", ok: Boolean(form.instagram.trim()) },
+@@ -316,7 +320,7 @@ export default function CompanyInfoPage() {
+     if (!form.benefits.trim() || !form.culture.trim()) {
+       items.push("Completa beneficios y cultura: son de las preguntas más frecuentes de los candidatos.");
+     }
+-    if (!channel.email_from.trim()) {
++    if (EMAIL_CHANNEL_ENABLED && !channel.email_from.trim()) {
+       items.push("Configura el correo remitente antes de contactar candidatos por email.");
+     }
+     if (!form.linkedin.trim()) {
+@@ -604,11 +608,13 @@ export default function CompanyInfoPage() {
+                 ? "Información esencial completa"
+                 : "Faltan datos esenciales"}
+             </span>
+-            <span className={`profile-chip ${completeness.channelConfigured ? "ok" : "warn"}`}>
+-              {completeness.channelConfigured
+-                ? "Canal de contacto configurado"
+-                : "Canal de contacto pendiente"}
+-            </span>
++            {EMAIL_CHANNEL_ENABLED ? (
++              <span className={`profile-chip ${completeness.channelConfigured ? "ok" : "warn"}`}>
++                {completeness.channelConfigured
++                  ? "Canal de contacto configurado"
++                  : "Canal de contacto pendiente"}
++              </span>
++            ) : null}
+             <span className={`profile-chip ${completeness.socialsConfigured ? "ok" : ""}`}>
+               {completeness.socialsConfigured
+                 ? "Redes sociales configuradas"
+diff --git a/src/pages/ConversationsPage.jsx b/src/pages/ConversationsPage.jsx
+index d6591a8..d81d587 100644
+--- a/src/pages/ConversationsPage.jsx
++++ b/src/pages/ConversationsPage.jsx
+@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
+ import { Link, useSearchParams } from "react-router-dom";
+ import VacancySelector from "../components/VacancySelector";
+ import { useAppContext } from "../context/AppContext";
++import { EMAIL_CHANNEL_ENABLED } from "../lib/featureFlags";
+ import {
+   getConversationMessages,
+   getConversations,
+@@ -84,7 +85,11 @@ export default function ConversationsPage() {
+     try {
+       setLoadingThreads(true);
+       const data = await getConversations(tenantId, { vacancyId });
+-      setThreads(Array.isArray(data?.items) ? data.items : []);
++      const items = Array.isArray(data?.items) ? data.items : [];
++      // Canal email invisibilizado mientras no sea funcional (feature flag).
++      setThreads(
++        EMAIL_CHANNEL_ENABLED ? items : items.filter((t) => t.platform !== "email")
++      );
+     } catch (loadError) {
+       setError(loadError.message || "No se pudieron cargar las conversaciones.");
+     } finally {
+diff --git a/src/pages/CvImportsPage.jsx b/src/pages/CvImportsPage.jsx
+index 7b8140f..9846dd1 100644
+--- a/src/pages/CvImportsPage.jsx
++++ b/src/pages/CvImportsPage.jsx
+@@ -5,6 +5,7 @@ import CvUploadPanel from "../components/CvUploadPanel";
+ import Modal from "../components/Modal";
+ import VacancySelector from "../components/VacancySelector";
+ import { useAppContext } from "../context/AppContext";
++import { EMAIL_CHANNEL_ENABLED } from "../lib/featureFlags";
+ import {
+   createCvImportJob,
+   listCvImportJobs,
+@@ -241,7 +242,7 @@ export default function CvImportsPage() {
+         <h1 className="h1">Carga manual de CVs</h1>
+         <p className="muted">
+           Sube uno o varios CVs para crear o reanudar candidaturas y contactar a los
+-          candidatos por el canal que elijas.
++          candidatos{EMAIL_CHANNEL_ENABLED ? " por el canal que elijas" : " por WhatsApp"}.
+         </p>
+       </section>
+ 
+@@ -252,6 +253,7 @@ export default function CvImportsPage() {
+ 
+       <CvUploadPanel files={files} onFilesChange={setFiles} disabled={submitting} />
+ 
++      {EMAIL_CHANNEL_ENABLED ? (
+       <section className="card">
+         <h2 className="h2">Canal de contacto</h2>
+         <div className="field">
+@@ -281,6 +283,7 @@ export default function CvImportsPage() {
+           </label>
+         </div>
+       </section>
++      ) : null}
+ 
+       <section className="card">
+         <div className="form-actions">
+-- 
+2.42.0.windows.1
+
