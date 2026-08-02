@@ -1,0 +1,1486 @@
+From 3379b4b28772363d7f501265a69ae1cfef00eb57 Mon Sep 17 00:00:00 2001
+From: Ermes Liriano <ermesliriano@mercedarios.net>
+Date: Fri, 24 Jul 2026 12:52:56 +0200
+Subject: [PATCH 3/4] added role managing features v2
+
+---
+ src/App.jsx                   |  14 +-
+ src/components/AppShell.jsx   |  77 ++++++++-
+ src/components/Sidebar.jsx    |  19 ++-
+ src/components/Topbar.jsx     |   2 +-
+ src/context/AppContext.jsx    |  61 ++++++-
+ src/lib/api.js                |  58 +++++++
+ src/lib/auth.js               |   8 +-
+ src/pages/AdminPage.jsx       | 299 ++++++++++++++++++++++++++++++++++
+ src/pages/CompanyInfoPage.jsx |  27 +++
+ src/pages/LoginPage.jsx       | 254 +++++++++++++++++------------
+ src/pages/SignupPage.jsx      | 286 +++++++++++++++-----------------
+ 11 files changed, 831 insertions(+), 274 deletions(-)
+ create mode 100644 src/pages/AdminPage.jsx
+
+diff --git a/src/App.jsx b/src/App.jsx
+index 971f669..546c1a9 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,7 +1,8 @@
+-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
++import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
+ import AppShell from "./components/AppShell";
+ import ProtectedRoute from "./components/ProtectedRoute";
+ import { AppProvider, useAppContext } from "./context/AppContext";
++import AdminPage from "./pages/AdminPage";
+ import ApplicationDetailPage from "./pages/ApplicationDetailPage";
+ import CompanyInfoPage from "./pages/CompanyInfoPage";
+ import ConversationFlowPage from "./pages/ConversationFlowPage";
+@@ -26,6 +27,12 @@ function NotFoundRedirect() {
+   return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
+ }
+ 
++// Rutas reservadas al administrador general (rol company → dashboard).
++function SuperadminRoute() {
++  const { isSuperadmin } = useAppContext();
++  return isSuperadmin ? <Outlet /> : <Navigate to="/dashboard" replace />;
++}
++
+ export default function App() {
+   return (
+     <AppProvider>
+@@ -45,7 +52,10 @@ export default function App() {
+               <Route path="/vacancies/:vacancyId/edit" element={<VacancyEditPage />} />
+               <Route path="/vacancies/:vacancyId/questions" element={<VacancyQuestionsPage />} />
+               <Route path="/tenant-questions" element={<TenantQuestionsPage />} />
+-              <Route path="/conversation-flow" element={<ConversationFlowPage />} />
++              <Route element={<SuperadminRoute />}>
++                <Route path="/conversation-flow" element={<ConversationFlowPage />} />
++                <Route path="/admin" element={<AdminPage />} />
++              </Route>
+               <Route path="/company-info" element={<CompanyInfoPage />} />
+               <Route path="/conversations" element={<ConversationsPage />} />
+             </Route>
+diff --git a/src/components/AppShell.jsx b/src/components/AppShell.jsx
+index 7f18ab0..17410d4 100644
+--- a/src/components/AppShell.jsx
++++ b/src/components/AppShell.jsx
+@@ -1,6 +1,7 @@
+ import { useEffect, useState } from "react";
+-import { Outlet, useLocation } from "react-router-dom";
++import { Outlet, useLocation, useNavigate } from "react-router-dom";
+ import { useAppContext } from "../context/AppContext";
++import { listTenantsAdmin } from "../lib/api";
+ import FlashMessage from "./FlashMessage";
+ import Sidebar from "./Sidebar";
+ import Topbar from "./Topbar";
+@@ -9,10 +10,22 @@ import Topbar from "./Topbar";
+  * AppShell (identidad CESAR IA Suite):
+  * - Autenticado: sidebar lateral fija (colapsable en móvil con hamburguesa +
+  *   overlay) + header superior compacto + área de contenido.
++ * - Header: selector de empresa (solo superadmin) o etiqueta de la empresa
++ *   (rol company).
+  * - No autenticado (login / alta): cabecera simple reutilizando el Topbar.
+  */
+ export default function AppShell() {
+-  const { flashes, removeFlash, isAuthenticated } = useAppContext();
++  const {
++    flashes,
++    removeFlash,
++    isAuthenticated,
++    isSuperadmin,
++    user,
++    tenantId,
++    setSelection,
++  } = useAppContext();
++  const navigate = useNavigate();
++  const [tenants, setTenants] = useState([]);
+   const [sidebarOpen, setSidebarOpen] = useState(false);
+   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+     try {
+@@ -49,6 +62,31 @@ export default function AppShell() {
+     return () => window.removeEventListener("keydown", onKeyDown);
+   }, [sidebarOpen]);
+ 
++  // Empresas para el selector del header (solo superadmin).
++  useEffect(() => {
++    if (!isAuthenticated || !isSuperadmin) {
++      setTenants([]);
++      return undefined;
++    }
++    let cancelled = false;
++    listTenantsAdmin()
++      .then((data) => {
++        if (!cancelled) setTenants(Array.isArray(data?.items) ? data.items : []);
++      })
++      .catch(() => {
++        // Token legado contra backend aún sin endpoint: selector oculto.
++        if (!cancelled) setTenants([]);
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, [isAuthenticated, isSuperadmin]);
++
++  function handleTenantChange(nextTenantId) {
++    // Cambiar de empresa limpia la vacante activa (pertenece a otra empresa).
++    setSelection({ tenantId: nextTenantId, vacancyId: "" });
++  }
++
+   if (!isAuthenticated) {
+     return (
+       <div className="app-shell">
+@@ -98,7 +136,40 @@ export default function AppShell() {
+               María · Reclutamiento Inteligente
+             </span>
+           </div>
+-          <div className="suite-header-right" />
++          <div className="suite-header-right">
++            {isSuperadmin && tenants.length > 0 ? (
++              <>
++                <label className="muted" htmlFor="tenant-switcher" style={{ fontSize: "0.82rem" }}>
++                  Empresa
++                </label>
++                <select
++                  id="tenant-switcher"
++                  className="input"
++                  style={{ width: "auto", minWidth: 180, padding: "6px 10px" }}
++                  value={tenantId || ""}
++                  onChange={(e) => handleTenantChange(e.target.value)}
++                >
++                  <option value="">Selecciona empresa...</option>
++                  {tenants.map((t) => (
++                    <option key={t.id} value={t.id}>
++                      {t.name}{t.is_active ? "" : " (inactiva)"}
++                    </option>
++                  ))}
++                </select>
++                <button
++                  className="btn small"
++                  type="button"
++                  onClick={() => navigate("/admin")}
++                  title="Crear nueva empresa"
++                >
++                  + Nueva empresa
++                </button>
++              </>
++            ) : null}
++            {!isSuperadmin && user?.tenant_name ? (
++              <span className="pill">{user.tenant_name}</span>
++            ) : null}
++          </div>
+         </header>
+ 
+         <main className="suite-content">
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+index cf32937..d335a64 100644
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -84,6 +84,13 @@ const ICONS = {
+       <circle cx="14.5" cy="16" r="2" fill="var(--graphite)" />
+     </Icon>
+   ),
++  admin: (
++    <Icon>
++      <circle cx="9" cy="8" r="3" />
++      <path d="M4 19c0-2.8 2.2-5 5-5s5 2.2 5 5" />
++      <path d="M16.5 5.5l1 .3a1 1 0 0 1 .6 1.4l-.4.9.7.8 1-.2a1 1 0 0 1 1.1 1l-.1 1-.9.5v1l.9.5a1 1 0 0 1 .1 1l-1.1 1-1-.2-.7.8.4.9" />
++    </Icon>
++  ),
+ };
+ 
+ const NAV_ITEMS = [
+@@ -95,14 +102,20 @@ const NAV_ITEMS = [
+   { to: "/tenant-questions", label: "Preguntas", icon: "questions" },
+   { to: "/conversations", label: "Conversaciones", icon: "conversations" },
+   { to: "/company-info", label: "Empresa", icon: "company" },
+-  { to: "/conversation-flow", label: "Configuración", icon: "settings" },
++  // Solo administradores generales:
++  { to: "/conversation-flow", label: "Configuración", icon: "settings", superadminOnly: true },
++  { to: "/admin", label: "Administración", icon: "admin", superadminOnly: true },
+ ];
+ 
+ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollapse }) {
+-  const { currentUserLabel, logout, pushFlash } = useAppContext();
++  const { currentUserLabel, isSuperadmin, logout, pushFlash } = useAppContext();
+   const navigate = useNavigate();
+   const location = useLocation();
+ 
++  const visibleItems = NAV_ITEMS.filter(
++    (item) => !item.superadminOnly || isSuperadmin
++  );
++
+   function handleLogout() {
+     logout();
+     pushFlash("message", "Sesión cerrada.");
+@@ -188,7 +201,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
+       </div>
+ 
+       <nav className="suite-nav">
+-        {NAV_ITEMS.map((item) => {
++        {visibleItems.map((item) => {
+           const forceActive = (item.alsoActiveOn || []).some((prefix) =>
+             location.pathname.startsWith(prefix)
+           );
+diff --git a/src/components/Topbar.jsx b/src/components/Topbar.jsx
+index baacc12..f019e69 100644
+--- a/src/components/Topbar.jsx
++++ b/src/components/Topbar.jsx
+@@ -62,7 +62,7 @@ export default function Topbar() {
+               </NavLink>
+ 
+               <NavLink className={getNavLinkClassName} to="/signup">
+-                Alta local
++                Administrador inicial
+               </NavLink>
+             </>
+           )}
+diff --git a/src/context/AppContext.jsx b/src/context/AppContext.jsx
+index 321cb49..9481c0c 100644
+--- a/src/context/AppContext.jsx
++++ b/src/context/AppContext.jsx
+@@ -1,9 +1,10 @@
+-import { createContext, useCallback, useContext, useMemo, useState } from "react";
++import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+ import {
+   clearAuthState,
+   getInitialAuthState,
+   persistAuthState,
+ } from "../lib/auth";
++import { authMe } from "../lib/api";
+ 
+ const AppContext = createContext(null);
+ 
+@@ -91,14 +92,14 @@ export function AppProvider({ children }) {
+     });
+   }, []);
+ 
+-  const login = useCallback(({ email, token, remember }) => {
+-    const nextAuthState = persistAuthState({ email, token, remember });
++  const login = useCallback(({ email, token, remember, user }) => {
++    const nextAuthState = persistAuthState({ email, token, remember, user });
+     setAuthState(nextAuthState);
+     return nextAuthState;
+   }, []);
+ 
+-  const signup = useCallback(({ email, token, remember }) => {
+-    const nextAuthState = persistAuthState({ email, token, remember });
++  const signup = useCallback(({ email, token, remember, user }) => {
++    const nextAuthState = persistAuthState({ email, token, remember, user });
+     setAuthState(nextAuthState);
+     return nextAuthState;
+   }, []);
+@@ -109,10 +110,56 @@ export function AppProvider({ children }) {
+     return nextAuthState;
+   }, []);
+ 
++  // Restaura/valida la sesión de usuario al cargar la app: refresca el perfil
++  // (rol, empresa) y cierra la sesión si el token caducó. Las sesiones por
++  // token (env/legado) no pasan por aquí.
++  useEffect(() => {
++    let cancelled = false;
++    const { token, isEnvToken, user, email, remember } = authState;
++    if (!token || isEnvToken || user !== null) return undefined;
++
++    // Sesión guardada sin perfil: puede ser token legado pegado a mano o un
++    // token de usuario de una versión previa. Intentamos hidratar.
++    authMe(token)
++      .then((data) => {
++        if (cancelled || !data?.user) return;
++        const next = persistAuthState({ email, token, remember, user: data.user });
++        setAuthState(next);
++      })
++      .catch((error) => {
++        // 401 en /auth/me con token legado válido para admin: lo dejamos estar.
++        if (!cancelled && error?.status === 401) {
++          // Token de usuario caducado/ inválido → no cerramos por si es el
++          // ADMIN_TOKEN legado (que /auth/me no reconoce); el resto de la API
++          // decidirá. No-op consciente.
++        }
++      });
++
++    return () => {
++      cancelled = true;
++    };
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [authState.token]);
++
++  const user = authState.user;
++  const isSuperadmin = Boolean(
++    authState.isEnvToken || user?.role === "superadmin" || (authState.token && !user)
++  );
++
++  // Rol company: fuerza SU empresa como selección activa en todo momento.
++  useEffect(() => {
++    if (user?.role === "company" && user.tenant_id && selectionState.tenantId !== user.tenant_id) {
++      setSelection({ tenantId: user.tenant_id, vacancyId: "" });
++    }
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [user, selectionState.tenantId]);
++
+   const value = useMemo(
+     () => ({
+       authState,
+-      currentUserLabel: authState.email || "Operador local",
++      user,
++      isSuperadmin,
++      currentUserLabel: user?.full_name || authState.email || "Operador local",
+       isAuthenticated: Boolean(authState.token),
+       login,
+       signup,
+@@ -126,6 +173,8 @@ export function AppProvider({ children }) {
+     }),
+     [
+       authState,
++      user,
++      isSuperadmin,
+       flashes,
+       selectionState,
+       login,
+diff --git a/src/lib/api.js b/src/lib/api.js
+index 67a1cee..6e771fa 100644
+--- a/src/lib/api.js
++++ b/src/lib/api.js
+@@ -639,12 +639,70 @@ export async function updateCompanyInfo(tenantId, institutionalInfo, options = {
+         email_reply_to: options.emailReplyTo ?? null,
+         email_subject_default: options.emailSubjectDefault ?? null,
+         email_signature: options.emailSignature ?? null,
++        whatsapp_sender: options.whatsappSender ?? null,
+       },
+       token: options.token,
+     }
+   );
+ }
+ 
++// ── Autenticación de usuarios y administración (roles) ─────────────
++
++export async function authBootstrapStatus() {
++  return apiFetch("/auth/bootstrap-status", { method: "GET" });
++}
++
++export async function authBootstrap({ email, password, fullName }) {
++  return apiFetch("/auth/bootstrap", {
++    method: "POST",
++    body: { email, password, full_name: fullName || null },
++  });
++}
++
++export async function authLogin({ email, password }) {
++  return apiFetch("/auth/login", {
++    method: "POST",
++    body: { email, password },
++  });
++}
++
++export async function authMe(token) {
++  return apiFetch("/auth/me", { method: "GET", token });
++}
++
++export async function listTenantsAdmin(options = {}) {
++  return apiFetch("/admin/v1/tenants", { method: "GET", token: options.token });
++}
++
++export async function createTenant({ name, slug }, options = {}) {
++  return apiFetch("/admin/v1/tenants", {
++    method: "POST",
++    body: { name, slug: slug || null },
++    token: options.token,
++  });
++}
++
++export async function listUsersAdmin(options = {}) {
++  return apiFetch("/admin/v1/users", { method: "GET", token: options.token });
++}
++
++export async function createUserAdmin(
++  { email, password, role, tenantId, fullName },
++  options = {}
++) {
++  return apiFetch("/admin/v1/users", {
++    method: "POST",
++    body: {
++      email,
++      password,
++      role,
++      tenant_id: tenantId || null,
++      full_name: fullName || null,
++    },
++    token: options.token,
++  });
++}
++
+ // ── Conversaciones con candidatos (transcripción) ────────────────────
+ 
+ export async function getConversations(tenantId, options = {}) {
+diff --git a/src/lib/auth.js b/src/lib/auth.js
+index da6e8be..f144fcd 100644
+--- a/src/lib/auth.js
++++ b/src/lib/auth.js
+@@ -82,7 +82,7 @@ function isEnvTokenDisabled() {
+   return storages.some((storage) => storage.getItem(ENV_DISABLED_KEY) === "1");
+ }
+ 
+-function normalizeAuthState({ email, token, lastLoginAt }, source) {
++function normalizeAuthState({ email, token, lastLoginAt, user }, source) {
+   return {
+     email: String(email || DEFAULT_EMAIL || "").trim(),
+     token: String(token || "").trim(),
+@@ -90,6 +90,9 @@ function normalizeAuthState({ email, token, lastLoginAt }, source) {
+     source,
+     isEnvToken: source === "env",
+     lastLoginAt: lastLoginAt || null,
++    // Perfil del usuario autenticado ({id,email,full_name,role,tenant_id,
++    // tenant_name}) o null en sesiones por token (legado/env).
++    user: user || null,
+   };
+ }
+ 
+@@ -129,7 +132,7 @@ export function getInitialAuthState() {
+   };
+ }
+ 
+-export function persistAuthState({ email, token, remember }) {
++export function persistAuthState({ email, token, remember, user }) {
+   clearStoredAuth();
+   setEnvTokenDisabled(false);
+ 
+@@ -137,6 +140,7 @@ export function persistAuthState({ email, token, remember }) {
+     email: String(email || DEFAULT_EMAIL).trim().toLowerCase(),
+     token: String(token || "").trim(),
+     lastLoginAt: new Date().toISOString(),
++    user: user || null,
+   };
+ 
+   if (remember) {
+diff --git a/src/pages/AdminPage.jsx b/src/pages/AdminPage.jsx
+new file mode 100644
+index 0000000..bb6b3af
+--- /dev/null
++++ b/src/pages/AdminPage.jsx
+@@ -0,0 +1,299 @@
++import { useCallback, useEffect, useState } from "react";
++import { Navigate } from "react-router-dom";
++import Table from "../components/Table";
++import { useAppContext } from "../context/AppContext";
++import {
++  createTenant,
++  createUserAdmin,
++  listTenantsAdmin,
++  listUsersAdmin,
++} from "../lib/api";
++
++/**
++ * Administración (solo superadmin): empresas y usuarios del sistema.
++ */
++export default function AdminPage() {
++  const { isSuperadmin, pushFlash, setSelection } = useAppContext();
++
++  const [tenants, setTenants] = useState([]);
++  const [users, setUsers] = useState([]);
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState("");
++
++  const [tenantForm, setTenantForm] = useState({ name: "", slug: "" });
++  const [creatingTenant, setCreatingTenant] = useState(false);
++
++  const [userForm, setUserForm] = useState({
++    fullName: "",
++    email: "",
++    password: "",
++    role: "company",
++    tenantId: "",
++  });
++  const [creatingUser, setCreatingUser] = useState(false);
++
++  const load = useCallback(async () => {
++    try {
++      setLoading(true);
++      setError("");
++      const [tenantsData, usersData] = await Promise.all([
++        listTenantsAdmin(),
++        listUsersAdmin(),
++      ]);
++      setTenants(Array.isArray(tenantsData?.items) ? tenantsData.items : []);
++      setUsers(Array.isArray(usersData?.items) ? usersData.items : []);
++    } catch (loadError) {
++      setError(loadError.message || "No se pudo cargar la administración.");
++    } finally {
++      setLoading(false);
++    }
++  }, []);
++
++  useEffect(() => {
++    if (isSuperadmin) load();
++  }, [isSuperadmin, load]);
++
++  if (!isSuperadmin) {
++    return <Navigate to="/dashboard" replace />;
++  }
++
++  async function handleCreateTenant(e) {
++    e.preventDefault();
++    if (!tenantForm.name.trim()) {
++      pushFlash("error", "El nombre de la empresa es obligatorio.");
++      return;
++    }
++    try {
++      setCreatingTenant(true);
++      const created = await createTenant({
++        name: tenantForm.name.trim(),
++        slug: tenantForm.slug.trim() || null,
++      });
++      pushFlash("message", `Empresa "${created.name}" creada.`);
++      setTenantForm({ name: "", slug: "" });
++      await load();
++      // Activa la empresa recién creada para empezar a configurarla.
++      setSelection({ tenantId: created.id, vacancyId: "" });
++    } catch (createError) {
++      pushFlash("error", createError.message || "No se pudo crear la empresa.");
++    } finally {
++      setCreatingTenant(false);
++    }
++  }
++
++  async function handleCreateUser(e) {
++    e.preventDefault();
++    if (!userForm.email.trim() || userForm.password.length < 8) {
++      pushFlash("error", "Email válido y contraseña de al menos 8 caracteres.");
++      return;
++    }
++    if (userForm.role === "company" && !userForm.tenantId) {
++      pushFlash("error", "Los usuarios de empresa requieren una empresa asignada.");
++      return;
++    }
++    try {
++      setCreatingUser(true);
++      await createUserAdmin({
++        email: userForm.email.trim(),
++        password: userForm.password,
++        role: userForm.role,
++        tenantId: userForm.role === "company" ? userForm.tenantId : null,
++        fullName: userForm.fullName.trim(),
++      });
++      pushFlash("message", "Usuario creado.");
++      setUserForm({ fullName: "", email: "", password: "", role: "company", tenantId: "" });
++      await load();
++    } catch (createError) {
++      pushFlash("error", createError.message || "No se pudo crear el usuario.");
++    } finally {
++      setCreatingUser(false);
++    }
++  }
++
++  const tenantColumns = [
++    { key: "name", label: "Empresa" },
++    { key: "slug", label: "Identificador" },
++    {
++      key: "is_active",
++      label: "Estado",
++      cell: (row) => (
++        <span className={`state-badge ${row.is_active ? "shortlist" : "pending"}`}>
++          {row.is_active ? "Activa" : "Inactiva"}
++        </span>
++      ),
++    },
++    {
++      key: "actions",
++      label: "Acciones",
++      cell: (row) => (
++        <button
++          className="btn small"
++          type="button"
++          onClick={() => {
++            setSelection({ tenantId: row.id, vacancyId: "" });
++            pushFlash("message", `Trabajando con "${row.name}".`);
++          }}
++        >
++          Trabajar con esta empresa
++        </button>
++      ),
++    },
++  ];
++
++  const userColumns = [
++    { key: "email", label: "Email" },
++    { key: "full_name", label: "Nombre", cell: (row) => row.full_name || "—" },
++    {
++      key: "role",
++      label: "Rol",
++      cell: (row) => (
++        <span className={`state-badge ${row.role === "superadmin" ? "interview" : "pending"}`}>
++          {row.role === "superadmin" ? "Administrador general" : "Empresa"}
++        </span>
++      ),
++    },
++    { key: "tenant_name", label: "Empresa", cell: (row) => row.tenant_name || "—" },
++    {
++      key: "is_active",
++      label: "Estado",
++      cell: (row) => (row.is_active ? "Activo" : "Inactivo"),
++    },
++  ];
++
++  return (
++    <>
++      <section className="card">
++        <div className="breadcrumb">Administración</div>
++        <h1 className="h1">Administración del sistema</h1>
++        <p className="muted">
++          Gestiona las empresas de la plataforma y los usuarios que acceden al
++          panel. Solo visible para administradores generales.
++        </p>
++      </section>
++
++      {error ? <div className="error-box">{error}</div> : null}
++
++      <section className="card">
++        <h2 className="h2">Empresas</h2>
++        <form className="row" onSubmit={handleCreateTenant} style={{ alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
++          <div className="field" style={{ margin: 0, minWidth: 220 }}>
++            <label className="field-label" htmlFor="ta-name">Nombre de la nueva empresa</label>
++            <input
++              id="ta-name"
++              className="input"
++              type="text"
++              value={tenantForm.name}
++              placeholder="Ej. Transportes Caribe S.R.L."
++              onChange={(e) => setTenantForm((f) => ({ ...f, name: e.target.value }))}
++            />
++          </div>
++          <div className="field" style={{ margin: 0, minWidth: 160 }}>
++            <label className="field-label" htmlFor="ta-slug">Identificador (opcional)</label>
++            <input
++              id="ta-slug"
++              className="input"
++              type="text"
++              value={tenantForm.slug}
++              placeholder="se genera automáticamente"
++              onChange={(e) => setTenantForm((f) => ({ ...f, slug: e.target.value }))}
++            />
++          </div>
++          <button className="btn primary" type="submit" disabled={creatingTenant}>
++            {creatingTenant ? "Creando..." : "Crear empresa"}
++          </button>
++        </form>
++
++        <div style={{ marginTop: 14 }}>
++          <Table
++            columns={tenantColumns}
++            rows={tenants}
++            loading={loading}
++            emptyText="No hay empresas registradas."
++          />
++        </div>
++      </section>
++
++      <section className="card">
++        <h2 className="h2">Usuarios</h2>
++        <form onSubmit={handleCreateUser}>
++          <div className="detail-grid">
++            <div className="field">
++              <label className="field-label" htmlFor="ua-name">Nombre completo</label>
++              <input
++                id="ua-name"
++                className="input"
++                type="text"
++                value={userForm.fullName}
++                onChange={(e) => setUserForm((f) => ({ ...f, fullName: e.target.value }))}
++              />
++            </div>
++            <div className="field">
++              <label className="field-label" htmlFor="ua-email">Email</label>
++              <input
++                id="ua-email"
++                className="input"
++                type="email"
++                value={userForm.email}
++                onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))}
++                autoComplete="off"
++              />
++            </div>
++            <div className="field">
++              <label className="field-label" htmlFor="ua-pass">Contraseña (mín. 8)</label>
++              <input
++                id="ua-pass"
++                className="input"
++                type="password"
++                value={userForm.password}
++                onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))}
++                autoComplete="new-password"
++              />
++            </div>
++            <div className="field">
++              <label className="field-label" htmlFor="ua-role">Rol</label>
++              <select
++                id="ua-role"
++                className="input"
++                value={userForm.role}
++                onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))}
++              >
++                <option value="company">Empresa (solo su empresa)</option>
++                <option value="superadmin">Administrador general (todo)</option>
++              </select>
++            </div>
++            {userForm.role === "company" ? (
++              <div className="field">
++                <label className="field-label" htmlFor="ua-tenant">Empresa asignada</label>
++                <select
++                  id="ua-tenant"
++                  className="input"
++                  value={userForm.tenantId}
++                  onChange={(e) => setUserForm((f) => ({ ...f, tenantId: e.target.value }))}
++                >
++                  <option value="">Selecciona una empresa...</option>
++                  {tenants.map((t) => (
++                    <option key={t.id} value={t.id}>{t.name}</option>
++                  ))}
++                </select>
++              </div>
++            ) : null}
++          </div>
++          <div className="form-actions">
++            <button className="btn primary" type="submit" disabled={creatingUser}>
++              {creatingUser ? "Creando..." : "Crear usuario"}
++            </button>
++          </div>
++        </form>
++
++        <div style={{ marginTop: 14 }}>
++          <Table
++            columns={userColumns}
++            rows={users}
++            loading={loading}
++            emptyText="No hay usuarios registrados."
++          />
++        </div>
++      </section>
++    </>
++  );
++}
+diff --git a/src/pages/CompanyInfoPage.jsx b/src/pages/CompanyInfoPage.jsx
+index 7858e57..f3c2ecf 100644
+--- a/src/pages/CompanyInfoPage.jsx
++++ b/src/pages/CompanyInfoPage.jsx
+@@ -75,6 +75,7 @@ const EMPTY_CHANNEL = {
+   email_reply_to: "",
+   email_subject_default: "",
+   email_signature: "",
++  whatsapp_sender: "",
+ };
+ 
+ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+@@ -172,6 +173,7 @@ export default function CompanyInfoPage() {
+           email_reply_to: data?.email_reply_to || "",
+           email_subject_default: data?.email_subject_default || "",
+           email_signature: data?.email_signature || "",
++          whatsapp_sender: data?.whatsapp_sender || "",
+         };
+ 
+         setForm(nextForm);
+@@ -250,6 +252,7 @@ export default function CompanyInfoPage() {
+     map.website = validateUrlValue(form.website);
+     map.email_from = validateEmailValue(channel.email_from);
+     map.email_reply_to = validateEmailValue(channel.email_reply_to);
++    map.whatsapp_sender = validatePhoneValue(channel.whatsapp_sender);
+     if (form.description && form.description.trim().length < 40) {
+       map.description = "La descripción es muy corta: usa al menos 40 caracteres.";
+     }
+@@ -363,6 +366,7 @@ export default function CompanyInfoPage() {
+         emailReplyTo: channel.email_reply_to.trim() || null,
+         emailSubjectDefault: channel.email_subject_default.trim() || null,
+         emailSignature: channel.email_signature.trim() || null,
++        whatsappSender: channel.whatsapp_sender.trim() || null,
+       });
+ 
+       const info = data?.institutional_info || {};
+@@ -376,6 +380,7 @@ export default function CompanyInfoPage() {
+         email_reply_to: data?.email_reply_to || "",
+         email_subject_default: data?.email_subject_default || "",
+         email_signature: data?.email_signature || "",
++        whatsapp_sender: data?.whatsapp_sender || "",
+       };
+       setForm(nextForm);
+       setChannel(nextChannel);
+@@ -825,6 +830,28 @@ export default function CompanyInfoPage() {
+                       Dirección completa: <strong>{addressPreview}</strong>
+                     </p>
+                   ) : null}
++
++                  <div className="future-feature" style={{ marginTop: 14 }}>
++                    <strong>Canal de WhatsApp (remitente)</strong>
++                    <p className="muted" style={{ margin: "6px 0 8px" }}>
++                      Número desde el que María contacta a los candidatos por
++                      WhatsApp. Debe ser un número aprobado para WhatsApp en la
++                      plataforma de mensajería; si se deja vacío se usa el número
++                      general de la plataforma.
++                    </p>
++                    <input
++                      id="pf-wa-sender"
++                      className={`input${errors.whatsapp_sender ? " invalid" : ""}`}
++                      type="tel"
++                      style={{ maxWidth: 280 }}
++                      value={channel.whatsapp_sender}
++                      placeholder="+18095551234"
++                      onChange={(e) => setChannelField("whatsapp_sender", e.target.value)}
++                    />
++                    {errors.whatsapp_sender ? (
++                      <div className="field-error-text" role="alert">{errors.whatsapp_sender}</div>
++                    ) : null}
++                  </div>
+                 </div>
+               ) : null}
+ 
+diff --git a/src/pages/LoginPage.jsx b/src/pages/LoginPage.jsx
+index 172b8fd..603f1a6 100644
+--- a/src/pages/LoginPage.jsx
++++ b/src/pages/LoginPage.jsx
+@@ -1,49 +1,48 @@
+-import { useState } from "react";
++import { useEffect, useState } from "react";
+ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+ import { useAppContext } from "../context/AppContext";
+-import { probeAdminToken } from "../lib/api";
++import { authBootstrapStatus, authLogin, probeAdminToken } from "../lib/api";
+ 
+ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ 
+-function validateLoginForm(form) {
+-  const errors = {};
+-
+-  if (!form.email.trim()) {
+-    errors.email = "El email es obligatorio.";
+-  } else if (!EMAIL_RE.test(form.email.trim())) {
+-    errors.email = "Introduce un email válido.";
+-  }
+-
+-  if (!form.token.trim()) {
+-    errors.token = "El token de administrador es obligatorio.";
+-  } else if (form.token.trim().length < 8) {
+-    errors.token = "El token debe tener al menos 8 caracteres.";
+-  }
+-
+-  return errors;
+-}
+-
++/**
++ * Acceso al panel.
++ * - Modo "user" (principal): email + contraseña contra /auth/login (roles).
++ * - Modo "token" (secundario, legado): email + ADMIN_TOKEN para integraciones
++ *   o recuperación.
++ * Si aún no existe ningún usuario, ofrece crear el administrador inicial.
++ */
+ export default function LoginPage() {
+-  const {
+-    isAuthenticated,
+-    login,
+-    tenantId,
+-    vacancyId,
+-    pushFlash,
+-  } = useAppContext();
++  const { isAuthenticated, login, pushFlash } = useAppContext();
+ 
+   const location = useLocation();
+   const navigate = useNavigate();
+ 
++  const [mode, setMode] = useState("user"); // user | token
++  const [needsBootstrap, setNeedsBootstrap] = useState(false);
+   const [form, setForm] = useState({
+     email: "",
++    password: "",
+     token: "",
+     remember: true,
+   });
+-
+   const [errors, setErrors] = useState({});
+   const [submitting, setSubmitting] = useState(false);
+ 
++  useEffect(() => {
++    let cancelled = false;
++    authBootstrapStatus()
++      .then((data) => {
++        if (!cancelled) setNeedsBootstrap(Boolean(data?.needs_bootstrap));
++      })
++      .catch(() => {
++        // Backend antiguo sin /auth: se ignora (queda el modo token).
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, []);
++
+   if (isAuthenticated) {
+     return <Navigate to="/dashboard" replace />;
+   }
+@@ -55,122 +54,167 @@ export default function LoginPage() {
+ 
+   function handleChange(event) {
+     const { name, value, type, checked } = event.target;
+-
+     setForm((current) => ({
+       ...current,
+       [name]: type === "checkbox" ? checked : value,
+     }));
+   }
+ 
+-  function renderError(name) {
+-    return errors[name] ? <div className="field-error">{errors[name]}</div> : null;
++  function validate() {
++    const next = {};
++    if (!form.email.trim()) {
++      next.email = "El email es obligatorio.";
++    } else if (!EMAIL_RE.test(form.email.trim())) {
++      next.email = "Introduce un email válido.";
++    }
++    if (mode === "user") {
++      if (!form.password) next.password = "La contraseña es obligatoria.";
++    } else if (!form.token.trim() || form.token.trim().length < 8) {
++      next.token = "El token debe tener al menos 8 caracteres.";
++    }
++    return next;
+   }
+ 
+   async function handleSubmit(event) {
+     event.preventDefault();
+-
+-    const nextErrors = validateLoginForm(form);
++    const nextErrors = validate();
+     setErrors(nextErrors);
+-
+-    if (Object.keys(nextErrors).length > 0) {
+-      return;
+-    }
++    if (Object.keys(nextErrors).length > 0) return;
+ 
+     try {
+       setSubmitting(true);
+ 
+-      const probe = await probeAdminToken({
+-        tenantId,
+-        vacancyId,
+-        token: form.token,
+-      });
+-
+-      login({
+-        email: form.email,
+-        token: form.token,
+-        remember: form.remember,
+-      });
++      if (mode === "user") {
++        const data = await authLogin({
++          email: form.email.trim(),
++          password: form.password,
++        });
++        login({
++          email: data.user?.email || form.email.trim(),
++          token: data.token,
++          remember: form.remember,
++          user: data.user || null,
++        });
++        pushFlash("message", `Bienvenido, ${data.user?.full_name || data.user?.email || ""}`.trim());
++      } else {
++        await probeAdminToken({ token: form.token.trim() });
++        login({
++          email: form.email.trim(),
++          token: form.token.trim(),
++          remember: form.remember,
++          user: null,
++        });
++        pushFlash("message", "Sesión iniciada con token de administrador.");
++      }
+ 
+-      pushFlash("message", probe.message || "Sesión iniciada correctamente.");
+       navigate(redirectTo, { replace: true });
+-    } catch (error) {
+-      setErrors({
+-        submit: error.message || "No se pudo iniciar sesión.",
+-      });
++    } catch (submitError) {
++      const message =
++        submitError?.status === 401
++          ? mode === "user"
++            ? "Credenciales incorrectas."
++            : "El token no es válido."
++          : submitError.message || "No se pudo iniciar sesión.";
++      setErrors({ submit: message });
+     } finally {
+       setSubmitting(false);
+     }
+   }
+ 
+   return (
+-    <section className="auth-layout">
+-      <div className="card auth-card">
+-        <h1 className="h1">Iniciar sesión</h1>
+-
+-        <p className="muted">
+-          Esta pantalla replica el patrón de Volunteerm, pero adaptado a un
+-          backend con Bearer token: el frontend guarda el token y el backend lo
+-          valida cuando se invocan rutas protegidas.
+-        </p>
+-
+-        <form className="form" onSubmit={handleSubmit} noValidate>
+-          <label className="label">
+-            Email
++    <section className="card auth-card">
++      <h1 className="h1">Iniciar sesión</h1>
++      <p className="muted">
++        Accede al panel de María · Reclutamiento Inteligente.
++      </p>
++
++      {needsBootstrap ? (
++        <div className="notice" style={{ borderRadius: 12, padding: "10px 14px", marginBottom: 14 }}>
++          Todavía no existe ningún usuario.{" "}
++          <Link to="/signup">Crea el administrador inicial</Link> para estrenar
++          el sistema de cuentas.
++        </div>
++      ) : null}
++
++      {errors.submit ? <div className="error-box">{errors.submit}</div> : null}
++
++      <form onSubmit={handleSubmit} noValidate>
++        <div className="field">
++          <label className="field-label" htmlFor="login-email">Email</label>
++          <input
++            id="login-email"
++            className={`input${errors.email ? " invalid" : ""}`}
++            type="email"
++            name="email"
++            value={form.email}
++            onChange={handleChange}
++            autoComplete="username"
++          />
++          {errors.email ? <div className="field-error-text">{errors.email}</div> : null}
++        </div>
++
++        {mode === "user" ? (
++          <div className="field">
++            <label className="field-label" htmlFor="login-password">Contraseña</label>
+             <input
+-              className="input"
+-              type="email"
+-              name="email"
+-              value={form.email}
++              id="login-password"
++              className={`input${errors.password ? " invalid" : ""}`}
++              type="password"
++              name="password"
++              value={form.password}
+               onChange={handleChange}
+-              placeholder="tu@email.com"
+-              autoComplete="username"
++              autoComplete="current-password"
+             />
+-          </label>
+-          {renderError("email")}
+-
+-          <label className="label">
+-            Token de administrador
++            {errors.password ? (
++              <div className="field-error-text">{errors.password}</div>
++            ) : null}
++          </div>
++        ) : (
++          <div className="field">
++            <label className="field-label" htmlFor="login-token">Token de administrador</label>
+             <input
+-              className="input"
++              id="login-token"
++              className={`input${errors.token ? " invalid" : ""}`}
+               type="password"
+               name="token"
+               value={form.token}
+               onChange={handleChange}
+-              placeholder="Pega aquí tu Bearer token"
+-              autoComplete="current-password"
++              autoComplete="off"
+             />
+-          </label>
+-          {renderError("token")}
++            {errors.token ? <div className="field-error-text">{errors.token}</div> : null}
++          </div>
++        )}
+ 
+-          <label className="checkbox-row">
++        <div className="field">
++          <label className="field-label" style={{ fontWeight: 400 }}>
+             <input
+               type="checkbox"
+               name="remember"
+               checked={form.remember}
+               onChange={handleChange}
+-            />
+-            <span>Recordarme en este navegador</span>
++            />{" "}
++            Mantener la sesión iniciada en este equipo
+           </label>
+-
+-          <p className="help-text">
+-            Si ya has definido `tenant_id` y `vacancy_id`, el login intentará
+-            verificar el token contra el endpoint protegido de ranking antes de
+-            redirigirte.
+-          </p>
+-
+-          {renderError("submit")}
+-
+-          <div className="form-actions">
+-            <button className="btn primary" type="submit" disabled={submitting}>
+-              {submitting ? "Validando..." : "Entrar"}
+-            </button>
+-          </div>
+-        </form>
+-
+-        <p className="muted">
+-          ¿No tienes sesión local todavía? <Link to="/signup">Crear acceso local</Link>
+-        </p>
+-      </div>
++        </div>
++
++        <div className="form-actions">
++          <button className="btn primary" type="submit" disabled={submitting}>
++            {submitting ? "Accediendo..." : "Entrar"}
++          </button>
++        </div>
++      </form>
++
++      <p className="muted" style={{ marginTop: 14, fontSize: "0.85rem" }}>
++        {mode === "user" ? (
++          <button className="linklike" type="button" onClick={() => setMode("token")}>
++            Acceso técnico con token de administrador
++          </button>
++        ) : (
++          <button className="linklike" type="button" onClick={() => setMode("user")}>
++            Volver al acceso con usuario y contraseña
++          </button>
++        )}
++      </p>
+     </section>
+   );
+ }
+diff --git a/src/pages/SignupPage.jsx b/src/pages/SignupPage.jsx
+index 94967c3..2040d27 100644
+--- a/src/pages/SignupPage.jsx
++++ b/src/pages/SignupPage.jsx
+@@ -1,190 +1,172 @@
+-import { useState } from "react";
++import { useEffect, useState } from "react";
+ import { Link, Navigate, useNavigate } from "react-router-dom";
+ import { useAppContext } from "../context/AppContext";
+-import { probeAdminToken } from "../lib/api";
++import { authBootstrap, authBootstrapStatus } from "../lib/api";
+ 
+ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ 
+-function validateSignupForm(form) {
+-  const errors = {};
+-
+-  if (!form.email.trim()) {
+-    errors.email = "El email es obligatorio.";
+-  } else if (!EMAIL_RE.test(form.email.trim())) {
+-    errors.email = "Introduce un email válido.";
+-  }
+-
+-  if (!form.token.trim()) {
+-    errors.token = "El token es obligatorio.";
+-  } else if (form.token.trim().length < 8) {
+-    errors.token = "El token debe tener al menos 8 caracteres.";
+-  }
+-
+-  if (!form.tokenRepeat.trim()) {
+-    errors.tokenRepeat = "Debes repetir el token.";
+-  } else if (form.tokenRepeat !== form.token) {
+-    errors.tokenRepeat = "Los tokens no coinciden.";
+-  }
+-
+-  return errors;
+-}
+-
++/**
++ * Alta del ADMINISTRADOR INICIAL (bootstrap).
++ * Solo funciona mientras no exista ningún usuario; después, los usuarios se
++ * crean desde Administración (solo superadmin).
++ */
+ export default function SignupPage() {
+-  const {
+-    isAuthenticated,
+-    signup,
+-    tenantId,
+-    vacancyId,
+-    pushFlash,
+-  } = useAppContext();
+-
++  const { isAuthenticated, login, pushFlash } = useAppContext();
+   const navigate = useNavigate();
+ 
++  const [status, setStatus] = useState("checking"); // checking | open | closed
+   const [form, setForm] = useState({
++    fullName: "",
+     email: "",
+-    token: "",
+-    tokenRepeat: "",
+-    remember: true,
++    password: "",
++    password2: "",
+   });
+-
+   const [errors, setErrors] = useState({});
+   const [submitting, setSubmitting] = useState(false);
+ 
++  useEffect(() => {
++    let cancelled = false;
++    authBootstrapStatus()
++      .then((data) => {
++        if (!cancelled) setStatus(data?.needs_bootstrap ? "open" : "closed");
++      })
++      .catch(() => {
++        if (!cancelled) setStatus("closed");
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, []);
++
+   if (isAuthenticated) {
+     return <Navigate to="/dashboard" replace />;
+   }
+ 
+   function handleChange(event) {
+-    const { name, value, type, checked } = event.target;
+-
+-    setForm((current) => ({
+-      ...current,
+-      [name]: type === "checkbox" ? checked : value,
+-    }));
+-  }
+-
+-  function renderError(name) {
+-    return errors[name] ? <div className="field-error">{errors[name]}</div> : null;
++    const { name, value } = event.target;
++    setForm((current) => ({ ...current, [name]: value }));
+   }
+ 
+   async function handleSubmit(event) {
+     event.preventDefault();
+-
+-    const nextErrors = validateSignupForm(form);
+-    setErrors(nextErrors);
+-
+-    if (Object.keys(nextErrors).length > 0) {
+-      return;
+-    }
++    const next = {};
++    if (!EMAIL_RE.test(form.email.trim())) next.email = "Introduce un email válido.";
++    if ((form.password || "").length < 8) next.password = "Mínimo 8 caracteres.";
++    if (form.password !== form.password2) next.password2 = "Las contraseñas no coinciden.";
++    setErrors(next);
++    if (Object.keys(next).length > 0) return;
+ 
+     try {
+       setSubmitting(true);
+-
+-      const probe = await probeAdminToken({
+-        tenantId,
+-        vacancyId,
+-        token: form.token,
++      const data = await authBootstrap({
++        email: form.email.trim(),
++        password: form.password,
++        fullName: form.fullName.trim(),
+       });
+-
+-      signup({
+-        email: form.email,
+-        token: form.token,
+-        remember: form.remember,
++      login({
++        email: data.user?.email || form.email.trim(),
++        token: data.token,
++        remember: true,
++        user: data.user || null,
+       });
+-
+-      pushFlash(
+-        "message",
+-        probe.message ||
+-          "Acceso local creado. El backend seguirá siendo quien valida el token."
+-      );
+-
++      pushFlash("message", "Administrador inicial creado. ¡Bienvenido!");
+       navigate("/dashboard", { replace: true });
+-    } catch (error) {
+-      setErrors({
+-        submit: error.message || "No se pudo crear el acceso local.",
+-      });
++    } catch (submitError) {
++      setErrors({ submit: submitError.message || "No se pudo crear el administrador." });
+     } finally {
+       setSubmitting(false);
+     }
+   }
+ 
+   return (
+-    <section className="auth-layout">
+-      <div className="card auth-card">
+-        <h1 className="h1">Crear acceso local</h1>
+-
+-        <div className="warning-box">
+-          Tu backend actual no expone un endpoint real de signup. Esta pantalla
+-          imita la experiencia de alta de Volunteerm, pero solo guarda email +
+-          token en el navegador.
+-        </div>
+-
+-        <form className="form" onSubmit={handleSubmit} noValidate>
+-          <label className="label">
+-            Email
+-            <input
+-              className="input"
+-              type="email"
+-              name="email"
+-              value={form.email}
+-              onChange={handleChange}
+-              placeholder="tu@email.com"
+-              autoComplete="username"
+-            />
+-          </label>
+-          {renderError("email")}
+-
+-          <label className="label">
+-            Token de administrador
+-            <input
+-              className="input"
+-              type="password"
+-              name="token"
+-              value={form.token}
+-              onChange={handleChange}
+-              placeholder="Pega aquí tu Bearer token"
+-              autoComplete="new-password"
+-            />
+-          </label>
+-          {renderError("token")}
+-
+-          <label className="label">
+-            Repite el token
+-            <input
+-              className="input"
+-              type="password"
+-              name="tokenRepeat"
+-              value={form.tokenRepeat}
+-              onChange={handleChange}
+-              placeholder="Repite el mismo token"
+-              autoComplete="new-password"
+-            />
+-          </label>
+-          {renderError("tokenRepeat")}
+-
+-          <label className="checkbox-row">
+-            <input
+-              type="checkbox"
+-              name="remember"
+-              checked={form.remember}
+-              onChange={handleChange}
+-            />
+-            <span>Guardar sesión de forma persistente</span>
+-          </label>
+-
+-          {renderError("submit")}
+-
+-          <div className="form-actions">
+-            <button className="btn primary" type="submit" disabled={submitting}>
+-              {submitting ? "Creando..." : "Crear acceso local"}
+-            </button>
+-          </div>
+-        </form>
+-
+-        <p className="muted">
+-          ¿Ya tienes el token? <Link to="/login">Iniciar sesión</Link>
+-        </p>
+-      </div>
++    <section className="card auth-card">
++      <h1 className="h1">Crear administrador inicial</h1>
++
++      {status === "checking" ? <p className="muted">Comprobando...</p> : null}
++
++      {status === "closed" ? (
++        <>
++          <p className="muted">
++            El sistema ya tiene usuarios. Los nuevos usuarios los crea un
++            administrador desde la sección Administración.
++          </p>
++          <Link className="btn" to="/login">Ir a iniciar sesión</Link>
++        </>
++      ) : null}
++
++      {status === "open" ? (
++        <>
++          <p className="muted">
++            Todavía no existe ningún usuario: crea la cuenta de administrador
++            general (acceso total a todas las empresas).
++          </p>
++
++          {errors.submit ? <div className="error-box">{errors.submit}</div> : null}
++
++          <form onSubmit={handleSubmit} noValidate>
++            <div className="field">
++              <label className="field-label" htmlFor="bs-name">Nombre completo</label>
++              <input
++                id="bs-name"
++                className="input"
++                type="text"
++                name="fullName"
++                value={form.fullName}
++                onChange={handleChange}
++              />
++            </div>
++            <div className="field">
++              <label className="field-label" htmlFor="bs-email">Email</label>
++              <input
++                id="bs-email"
++                className={`input${errors.email ? " invalid" : ""}`}
++                type="email"
++                name="email"
++                value={form.email}
++                onChange={handleChange}
++                autoComplete="username"
++              />
++              {errors.email ? <div className="field-error-text">{errors.email}</div> : null}
++            </div>
++            <div className="field">
++              <label className="field-label" htmlFor="bs-pass">Contraseña</label>
++              <input
++                id="bs-pass"
++                className={`input${errors.password ? " invalid" : ""}`}
++                type="password"
++                name="password"
++                value={form.password}
++                onChange={handleChange}
++                autoComplete="new-password"
++              />
++              {errors.password ? (
++                <div className="field-error-text">{errors.password}</div>
++              ) : null}
++            </div>
++            <div className="field">
++              <label className="field-label" htmlFor="bs-pass2">Repite la contraseña</label>
++              <input
++                id="bs-pass2"
++                className={`input${errors.password2 ? " invalid" : ""}`}
++                type="password"
++                name="password2"
++                value={form.password2}
++                onChange={handleChange}
++                autoComplete="new-password"
++              />
++              {errors.password2 ? (
++                <div className="field-error-text">{errors.password2}</div>
++              ) : null}
++            </div>
++
++            <div className="form-actions">
++              <button className="btn primary" type="submit" disabled={submitting}>
++                {submitting ? "Creando..." : "Crear administrador"}
++              </button>
++            </div>
++          </form>
++        </>
++      ) : null}
+     </section>
+   );
+ }
+-- 
+2.42.0.windows.1
+

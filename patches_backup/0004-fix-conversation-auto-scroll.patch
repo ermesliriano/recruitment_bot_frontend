@@ -1,0 +1,82 @@
+From dafd62f64abba0c453deb1809b813c9323f8a2c3 Mon Sep 17 00:00:00 2001
+From: Ermes Liriano <ermesliriano@mercedarios.net>
+Date: Thu, 30 Jul 2026 19:19:50 +0200
+Subject: [PATCH 4/4] fix conversation auto-scroll
+
+---
+ src/pages/ConversationsPage.jsx | 28 ++++++++++++++++++++++++++--
+ 1 file changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/src/pages/ConversationsPage.jsx b/src/pages/ConversationsPage.jsx
+index d81d587..9cc14eb 100644
+--- a/src/pages/ConversationsPage.jsx
++++ b/src/pages/ConversationsPage.jsx
+@@ -16,6 +16,7 @@ const PLATFORM_LABELS = {
+ };
+ 
+ const POLL_MS = 15000;
++const AUTO_SCROLL_THRESHOLD_PX = 80;
+ 
+ function initialsOf(name, fallback) {
+   const source = (name || fallback || "?").trim();
+@@ -64,6 +65,8 @@ export default function ConversationsPage() {
+   const [error, setError] = useState("");
+ 
+   const messagesEndRef = useRef(null);
++  const messagesContainerRef = useRef(null);
++  const shouldAutoScrollRef = useRef(true);
+   const selectedRef = useRef(null);
+   selectedRef.current = selected;
+ 
+@@ -166,10 +169,26 @@ export default function ConversationsPage() {
+   }, [tenantId, loadThreads, loadMessages]);
+ 
+   useEffect(() => {
+-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
++    if (shouldAutoScrollRef.current) {
++      messagesEndRef.current?.scrollIntoView({
++        behavior: "smooth",
++        block: "end",
++      });
++    }
+   }, [messages]);
+ 
++  function handleMessagesScroll() {
++    const container = messagesContainerRef.current;
++    if (!container) return;
++
++    const distanceFromBottom =
++      container.scrollHeight - container.scrollTop - container.clientHeight;
++    shouldAutoScrollRef.current =
++      distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
++  }
++
+   function handleSelect(thread) {
++    shouldAutoScrollRef.current = true;
+     setSelected(thread);
+     setMessages([]);
+     setError("");
+@@ -181,6 +200,7 @@ export default function ConversationsPage() {
+     if (!text || !selected || sending) return;
+ 
+     try {
++      shouldAutoScrollRef.current = true;
+       setSending(true);
+       setError("");
+       await sendConversationMessage(tenantId, selected.platform, selected.chat_id, text);
+@@ -310,7 +330,11 @@ export default function ConversationsPage() {
+                   </div>
+                 </div>
+ 
+-                <div className="chat-messages">
++                <div
++                  className="chat-messages"
++                  ref={messagesContainerRef}
++                  onScroll={handleMessagesScroll}
++                >
+                   {loadingMessages ? (
+                     <p className="muted chat-empty">Cargando conversación...</p>
+                   ) : null}
+-- 
+2.42.0.windows.1
+
